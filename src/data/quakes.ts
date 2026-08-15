@@ -669,8 +669,9 @@ export const dateShort = (iso: string) => {
   return `${d.getUTCDate()} ${MONTHS_ES[d.getUTCMonth()]}`;
 };
 
-export const CATALOG_FIRST = dateShort(QUAKES[0].date);
-export const CATALOG_LAST = dateShort(QUAKES[QUAKES.length - 1].date);
+const _catalogSorted = [...QUAKES].sort((a, b) => a.date.localeCompare(b.date));
+export const CATALOG_FIRST = dateShort(_catalogSorted[0].date);
+export const CATALOG_LAST = dateShort(_catalogSorted[_catalogSorted.length - 1].date);
 
 export const magColor = (m: number) => {
   if (m >= 8) return "#e23a62";

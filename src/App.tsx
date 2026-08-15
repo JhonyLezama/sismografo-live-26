@@ -460,7 +460,7 @@ export default function App() {
       <div className={`col-span-2 flex flex-col gap-1.5 ${d("md:col-span-12 lg:col-span-5 md:flex-row md:items-center md:gap-3")}`}>
         <span className="font-mono text-[10px] tracking-[0.2em] text-dim uppercase md:hidden">Capa</span>
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
-          <div className="grid w-full grid-cols-3 overflow-hidden border border-line sm:flex sm:w-auto sm:min-w-[170px] sm:flex-1" role="group" aria-label="Capa de datos del mapa">
+          <div className="grid w-full grid-cols-3 overflow-hidden border border-line sm:min-w-[170px] sm:flex-1" role="group" aria-label="Capa de datos del mapa">
             {[
               { m: "local", l: "2026 · Local" },
               { m: "live", l: "USGS · En vivo" },
@@ -519,9 +519,6 @@ export default function App() {
               </svg>
             </button>
           </div>
-          <span className="w-fit border border-line bg-panel px-2.5 py-1.5 font-mono text-[9px] tracking-widest text-dim uppercase">
-            Catálogo 2026 · corte {CATALOG_LAST}
-          </span>
         </div>
       </div>
     </div>
