@@ -8,6 +8,8 @@ import type { Quake } from "../data/quakes";
 import { magColor, dateShort, fmt, fmtMoney, depthClass, mmiColor } from "../data/quakes";
 import type { LiveQuake } from "../data/usgs";
 import { timeAgo } from "../data/usgs";
+import type { GdacsAlert } from "../data/gdacs";
+import { gdacsColor } from "../data/gdacs";
 import { PLATES } from "../data/plates";
 import { saveBlob } from "../data/export";
 import { useMediaQuery, usePrefersReducedMotion } from "../hooks";
@@ -209,6 +211,7 @@ interface Props {
   mode: MapMode;
   liveSelectedId: string | null;
   onSelectLive: (id: string | null) => void;
+  gdacs?: GdacsAlert[];
   caption?: string | null;
   fullscreenBar?: React.ReactNode;
   maxMonth?: number;
@@ -365,6 +368,7 @@ export default memo(function WorldMap({
   mode,
   liveSelectedId,
   onSelectLive,
+  gdacs = [],
   caption,
   fullscreenBar,
   maxMonth,
@@ -382,6 +386,7 @@ export default memo(function WorldMap({
   const [hoverLiveId, setHoverLiveId] = useState<string | null>(null);
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
   const [showPlates, setShowPlates] = useState(false);
+  const [showGdacs, setShowGdacs] = useState(true);
   const [selectMode, setSelectMode] = useState(false);
   const [areaDraft, setAreaDraft] = useState<{ g1: [number, number]; g2: [number, number] } | null>(null);
   const [plateSel, setPlateSel] = useState<number | null>(null);
@@ -534,6 +539,15 @@ export default memo(function WorldMap({
         return { q, x, y };
       }),
     [liveQuakes]
+  );
+
+  const gdacsPoints = useMemo(
+    () =>
+      gdacs.map((a) => {
+        const [x, y] = projection([a.lon, a.lat]) ?? [0, 0];
+        return { a, x, y };
+      }),
+    [gdacs]
   );
 
   /* espejo de view para el pan imperativo (sin re-render por frame) */
@@ -1006,6 +1020,37 @@ export default memo(function WorldMap({
                 </g>
               );
             })}
+
+          {/* capa GDACS (alertas sísmicas EQ, solo Red/Orange) */}
+          {showGdacs &&
+            gdacsPoints
+              .filter(({ a }) => a.alertlevel !== "Green")
+              .map(({ a, x, y }) => {
+                const c = gdacsColor(a.alertlevel);
+                const r = Math.max(3.4, 15 / Math.pow(view.k, 0.6));
+                return (
+                  <g key={a.eventid} transform={`translate(${x}, ${y})`} pointerEvents="none">
+                    <title>{a.title}</title>
+                    <circle
+                      r={r * 2.2}
+                      fill="none"
+                      stroke={c}
+                      strokeWidth={1}
+                      opacity={0.75}
+                      className="ring-pulse"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                    <path
+                      d={`M${-r} 0L0 ${-r}L${r} 0L0 ${r}Z`}
+                      fill={c}
+                      fillOpacity={0.35}
+                      stroke={c}
+                      strokeWidth={1.2}
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  </g>
+                );
+              })}
         </g>
 
         {/* nombres de países (tamaño constante en pantalla, siguen al mapa) */}
@@ -1205,6 +1250,23 @@ export default memo(function WorldMap({
           </svg>
         </button>
         <button
+          onClick={() => setShowGdacs((v) => !v)}
+          aria-pressed={showGdacs}
+          aria-label={showGdacs ? "Ocultar alertas GDACS" : "Mostrar alertas GDACS"}
+          title={showGdacs ? "Ocultar alertas GDACS" : "Mostrar alertas GDACS"}
+          className={`chip-btn grid h-7 w-7 place-items-center border border-line bg-panel/90 sm:h-8 sm:w-8 text-fog hover:border-amber hover:text-amber ${
+            showGdacs ? BTN_ACTIVE : ""
+          }`}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M8 3.5v3" />
+            <path d="M5 5.5a3.6 3.6 0 0 0 0 5" />
+            <path d="M11 5.5a3.6 3.6 0 0 1 0 5" />
+            <path d="M2.8 3.2a7.4 7.4 0 0 0 0 9.6" />
+            <path d="M13.2 3.2a7.4 7.4 0 0 1 0 9.6" />
+          </svg>
+        </button>
+        <button
           onClick={toggleFullscreen}
           aria-label={isFullscreen ? "Salir de pantalla completa" : "Ver en pantalla completa"}
           title={isFullscreen ? "Salir de pantalla completa (Esc)" : "Ver en pantalla completa"}
@@ -1257,6 +1319,12 @@ export default memo(function WorldMap({
           <span className="flex items-center gap-1.5 border-l border-line pl-3">
             <span className="inline-block h-0 w-6 border-t border-dashed" style={{ borderColor: "#e23a62" }} />
             <span className="font-mono text-[10px] text-fog">límites de placa · clic = nombre</span>
+          </span>
+        )}
+        {showGdacs && (
+          <span className="flex items-center gap-1.5 border-l border-line pl-3">
+            <span className="inline-block h-2 w-2 rotate-45 border" style={{ borderColor: "#e23a62", background: "#e23a6233" }} />
+            <span className="font-mono text-[10px] text-fog">GDACS · alerta</span>
           </span>
         )}
       </div>

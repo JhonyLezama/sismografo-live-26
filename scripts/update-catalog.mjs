@@ -145,6 +145,64 @@ async function fetchUsgsFeeds() {
   return { feed, significant };
 }
 
+/* ---------- GDACS (solo eventos sísmicos EQ) ---------- */
+
+const GDACS_RSS = "https://www.gdacs.org/xml/rss_7d.xml";
+
+function esc(s) {
+  return (s || "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+function rxTag(item, tag) {
+  const m = item.match(new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`));
+  return m ? esc(m[1]).trim() : "";
+}
+
+function parseGdacsRss(text) {
+  const items = text.match(/<item>[\s\S]*?<\/item>/g) ?? [];
+  const alerts = [];
+  for (const it of items) {
+    if (rxTag(it, "gdacs:eventtype") !== "EQ") continue;
+    const lat = parseFloat(rxTag(it, "geo:lat"));
+    const lon = parseFloat(rxTag(it, "geo:long"));
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    const popVal = it.match(/<gdacs:population[^>]*?value="([\d.]+)"/);
+    const popUnit = it.match(/<gdacs:population[^>]*?unit="([^"]+)"/);
+    alerts.push({
+      eventid: rxTag(it, "gdacs:eventid"),
+      eventtype: "EQ",
+      alertlevel: rxTag(it, "gdacs:alertlevel"),
+      title: rxTag(it, "title"),
+      country: rxTag(it, "gdacs:country"),
+      iso3: rxTag(it, "gdacs:iso3"),
+      severity: rxTag(it, "gdacs:severity"),
+      population: popVal ? parseFloat(popVal[1]) : 0,
+      popUnit: popUnit ? popUnit[1] : "",
+      lat: Math.round(lat * 100) / 100,
+      lon: Math.round(lon * 100) / 100,
+      pubDate: rxTag(it, "pubDate"),
+      link: rxTag(it, "link"),
+    });
+  }
+  return alerts;
+}
+
+async function fetchGdacsSnapshot() {
+  const res = await fetch(GDACS_RSS, {
+    headers: { Accept: "application/rss+xml, application/xml, text/xml" },
+  });
+  if (!res.ok) throw new Error(`GDACS: HTTP ${res.status}`);
+  return {
+    updatedAt: new Date().toISOString(),
+    alerts: parseGdacsRss(await res.text()),
+  };
+}
+
 /* FDSN: buscar el evento USGS que corresponde a una entrada del catálogo sin usgsId */
 async function fdsnSearch(entry) {
   const lo = Math.max(-180, entry.lon - 2);
@@ -376,7 +434,32 @@ async function main() {
       assignedIds.add(f.id);
     }
 
-    if (added.length || updated.length || backfilled.length || discrepancies.length || repairs.length) {
+    // 4) GDACS: snapshot de alertas sísmicas para public/gdacs.json (capa runtime)
+    let gdacsReport = null;
+    if (withGdacs) {
+      try {
+        const snap = await fetchGdacsSnapshot();
+        const GDF = path.join(ROOT, "public", "gdacs.json");
+        let prevAlerts = [];
+        try {
+          prevAlerts = JSON.parse(fs.readFileSync(GDF, "utf8")).alerts ?? [];
+        } catch { /* primer run */ }
+        const prevByLevel = new Map(prevAlerts.map((a) => [a.eventid, a.alertlevel]));
+        if (JSON.stringify(prevAlerts) !== JSON.stringify(snap.alerts)) {
+          if (!dryRun) {
+            fs.mkdirSync(path.dirname(GDF), { recursive: true });
+            fs.writeFileSync(GDF, JSON.stringify(snap, null, 2) + "\n");
+          }
+          gdacsReport = snap.alerts.filter(
+            (a) => a.alertlevel === "Red" || a.alertlevel === "Orange",
+          ).filter((a) => prevByLevel.get(a.eventid) !== a.alertlevel);
+        }
+      } catch (e) {
+        console.warn(`[aviso] GDACS no disponible: ${e.message}`);
+      }
+    }
+
+    if (added.length || updated.length || backfilled.length || discrepancies.length || repairs.length || gdacsReport) {
       const next = JSON.stringify(quakes, null, 2) + "\n";
       if (!dryRun) fs.writeFileSync(QUI, next);
 
@@ -422,6 +505,13 @@ async function main() {
       if (discrepancies.length) {
         L.push(`## Diferencias en eventos curados (solo aviso, NO aplicadas) (${discrepancies.length})`);
         for (const d of discrepancies) L.push(`- \`${d.id}\` · ${d.dif.join(", ")}`);
+        L.push("");
+      }
+      if (gdacsReport && gdacsReport.length) {
+        L.push(`## Alertas GDACS nuevas (Red/Orange) (${gdacsReport.length})`);
+        for (const a of gdacsReport) {
+          L.push(`- **${a.alertlevel}** · ${a.title} · ${a.country} · \`${a.eventid}\``);
+        }
         L.push("");
       }
       const pending = quakes.filter((q) => q.needsReview);

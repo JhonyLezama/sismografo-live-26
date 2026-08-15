@@ -6,6 +6,8 @@ import BottomSheet from "./components/BottomSheet";
 import MobileNav from "./components/MobileNav";
 import { fetchLiveQuakes, timeAgo, feedUrl, loadLiveCache, USGS_WINDOWS } from "./data/usgs";
 import type { LiveQuake, LiveWindow } from "./data/usgs";
+import type { GdacsAlert } from "./data/gdacs";
+import { loadGdacs } from "./data/gdacs";
 import { downloadLiveCSV, downloadQuakesCSV, downloadQuakesGeoJSON } from "./data/export";
 import { emitInstallSignal } from "./installSignals";
 import Ticker from "./components/Ticker";
@@ -229,6 +231,18 @@ export default function App() {
   soundOnRef.current = soundOn;
   const [mapMode, setMapMode] = useState<MapMode>(urlInit.mapMode);
   const [liveSel, setLiveSel] = useState<string | null>(null);
+
+  /* capa GDACS — snapshot servido desde public/gdacs.json (refrescado por el workflow) */
+  const [gdacsAlerts, setGdacsAlerts] = useState<GdacsAlert[]>([]);
+  useEffect(() => {
+    let active = true;
+    loadGdacs().then((a) => {
+      if (active) setGdacsAlerts(a);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!timePlay || mapMode === "live") return;
@@ -794,6 +808,7 @@ export default function App() {
                 mode={mapMode}
                 liveSelectedId={liveSel}
                 onSelectLive={onSelectLive}
+                gdacs={gdacsAlerts}
                 caption={caption}
                 fullscreenBar={fullscreenBar}
                 maxMonth={timeMonth}
