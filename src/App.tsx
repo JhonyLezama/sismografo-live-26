@@ -287,120 +287,137 @@ export default function App() {
     ? `${captionParts.filter(Boolean).join(" · ")} · ${filtered.length} EVENTOS`
     : null;
 
-  const renderFilters = (compact: boolean) => (
-    <div className="flex flex-wrap items-center gap-3">
-      <span className="font-mono text-[10px] tracking-[0.2em] text-dim uppercase">Magnitud</span>
-      <div className="flex overflow-hidden border border-line">
-        {MAG_CHIPS.map((c) => (
-          <button
-            key={c.v}
-            onClick={() => setMinMag(c.v)}
-            className={`chip-btn px-1.5 py-1.5 font-mono text-[10px] sm:px-3.5 sm:text-xs ${
-              minMag === c.v ? "bg-amber text-abyss" : "bg-panel text-fog hover:text-bone"
-            }`}
-          >
-            {c.l}
-          </button>
-        ))}
+  const renderFilters = (_compact: boolean) => {
+    const d = (v: string) => (_compact ? "" : v);
+    return (
+    <div className={`grid grid-cols-2 items-stretch gap-x-3 gap-y-3 ${d("md:grid-cols-12 md:items-center md:gap-3")}`}>
+      {/* Magnitud */}
+      <div className={`col-span-2 flex flex-col gap-1.5 ${d("md:col-span-12 lg:col-span-7 md:flex-row md:items-center md:gap-3")}`}>
+        <span className="font-mono text-[10px] tracking-[0.2em] text-dim uppercase">Magnitud</span>
+        <div className="flex w-full overflow-hidden border border-line md:w-auto">
+          {MAG_CHIPS.map((c) => (
+            <button
+              key={c.v}
+              onClick={() => setMinMag(c.v)}
+              className={`chip-btn flex-1 px-1 py-1.5 font-mono text-[10px] sm:px-3 sm:text-xs md:flex-none ${
+                minMag === c.v ? "bg-amber text-abyss" : "bg-panel text-fog hover:text-bone"
+              }`}
+            >
+              {c.l}
+            </button>
+          ))}
+        </div>
       </div>
-      <span className="ml-2 font-mono text-[10px] tracking-[0.2em] text-dim uppercase">Región</span>
-      <select
-        value={region}
-        onChange={(e) => setRegion(e.target.value as (typeof REGIONS)[number])}
-        className="chip-btn border border-line bg-panel px-3 py-1.5 font-mono text-xs text-bone outline-none hover:border-fog"
-      >
-        {REGIONS.map((r) => (
-          <option key={r} value={r}>{r}</option>
-        ))}
-      </select>
-      <span className="ml-2 font-mono text-[10px] tracking-[0.2em] text-dim uppercase">Mes</span>
-      <select
-        value={month}
-        onChange={(e) => setMonth(Number(e.target.value))}
-        className="chip-btn border border-line bg-panel px-3 py-1.5 font-mono text-xs text-bone outline-none hover:border-fog"
-      >
-        <option value={-1}>Todo el año</option>
-        {MONTHS_ES.slice(0, 8).map((m, i) => (
-          <option key={m} value={i}>{m}</option>
-        ))}
-      </select>
-      <span className="ml-2 font-mono text-[10px] tracking-[0.2em] text-dim uppercase">Profundidad</span>
-      <div className="flex overflow-hidden border border-line">
-        {DEPTH_CHIPS.map((c) => (
-          <button
-            key={c.v}
-            onClick={() => setDepth(c.v)}
-            className={`chip-btn px-1.5 py-1.5 font-mono text-[10px] sm:px-3 sm:text-xs ${
-              depth === c.v ? "bg-amber text-abyss" : "bg-panel text-fog hover:text-bone"
-            }`}
-          >
-            {c.l}
-          </button>
-        ))}
-      </div>
-      <span
-        className={`border border-line bg-panel px-3 py-1.5 font-mono text-[11px] tracking-widest text-jade ${
-          compact ? "ml-0" : "ml-auto"
-        }`}
-      >
-        {filtered.length} EVENTOS
-      </span>
-      <div className="flex overflow-hidden border border-line" role="group" aria-label="Capa de datos del mapa">
-        {[
-          { m: "local", l: "2026 · Local" },
-          { m: "live", l: "USGS · En vivo" },
-          { m: "both", l: "Ambos" },
-        ].map((o) => (
-          <button
-            key={o.m}
-            onClick={() => setMapMode(o.m as MapMode)}
-            aria-pressed={mapMode === o.m}
-            title={
-              o.m === "local"
-                ? "Catálogo 2026 con datos locales"
-                : o.m === "live"
-                  ? "Sismos reales del USGS (últimos 30 días)"
-                  : "Ambas capas superpuestas"
-            }
-            className={`chip-btn px-1.5 py-1.5 font-mono text-[10px] uppercase transition-colors sm:px-3 sm:text-[11px] ${
-              mapMode === o.m
-                ? "bg-amber text-abyss"
-                : "bg-panel text-fog hover:text-bone"
-            }`}
-          >
-            <span className="sm:hidden">
-              {o.m === "live" ? "En vivo" : o.m === "local" ? "Local" : "Ambos"}
-            </span>
-            <span className="hidden sm:inline">{o.l}</span>
-            {o.m !== "local" && (
-              <span className="ml-1.5 opacity-80">
-                · {liveStatus === "loading" ? "···" : liveQuakes.length}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-      <button
-        onClick={refreshLive}
-        aria-label="Actualizar datos del USGS"
-        title="Actualizar datos del USGS"
-        className="chip-btn grid h-[30px] w-[30px] place-items-center border border-line bg-panel text-fog hover:border-teal hover:text-teal"
-      >
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 16 16"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          className={liveStatus === "loading" ? "animate-spin" : ""}
+      {/* Región */}
+      <div className={`flex min-w-0 flex-col gap-1.5 ${d("md:col-span-6 lg:col-span-2 md:flex-row md:items-center md:gap-3")}`}>
+        <span className="font-mono text-[10px] tracking-[0.2em] text-dim uppercase">Región</span>
+        <select
+          value={region}
+          onChange={(e) => setRegion(e.target.value as (typeof REGIONS)[number])}
+          className="w-full min-w-0 chip-btn border border-line bg-panel px-3 py-1.5 font-mono text-xs text-bone outline-none hover:border-fog md:w-auto"
         >
-          <path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.5v3h-3" />
-        </svg>
-      </button>
+          {REGIONS.map((r) => (
+            <option key={r} value={r}>{r}</option>
+          ))}
+        </select>
+      </div>
+      {/* Mes */}
+      <div className={`flex min-w-0 flex-col gap-1.5 ${d("md:col-span-6 lg:col-span-3 md:flex-row md:items-center md:gap-3")}`}>
+        <span className="font-mono text-[10px] tracking-[0.2em] text-dim uppercase">Mes</span>
+        <select
+          value={month}
+          onChange={(e) => setMonth(Number(e.target.value))}
+          className="w-full min-w-0 chip-btn border border-line bg-panel px-3 py-1.5 font-mono text-xs text-bone outline-none hover:border-fog md:w-auto"
+        >
+          <option value={-1}>Todo el año</option>
+          {MONTHS_ES.slice(0, 8).map((m, i) => (
+            <option key={m} value={i}>{m}</option>
+          ))}
+        </select>
+      </div>
+      {/* Profundidad */}
+      <div className={`col-span-2 flex flex-col gap-1.5 ${d("md:col-span-12 lg:col-span-7 md:flex-row md:items-center md:gap-3")}`}>
+        <span className="font-mono text-[10px] tracking-[0.2em] text-dim uppercase">Profundidad</span>
+        <div className="flex w-full overflow-hidden border border-line md:w-auto">
+          {DEPTH_CHIPS.map((c) => (
+            <button
+              key={c.v}
+              onClick={() => setDepth(c.v)}
+              className={`chip-btn flex-1 px-1 py-1.5 font-mono text-[10px] sm:px-3 sm:text-xs md:flex-none ${
+                depth === c.v ? "bg-amber text-abyss" : "bg-panel text-fog hover:text-bone"
+              }`}
+            >
+              {c.l}
+            </button>
+          ))}
+        </div>
+      </div>
+      {/* Capa + contador + refresco */}
+      <div className={`col-span-2 flex flex-col gap-1.5 ${d("md:col-span-12 lg:col-span-5 md:flex-row md:items-center md:gap-3")}`}>
+        <span className="font-mono text-[10px] tracking-[0.2em] text-dim uppercase md:hidden">Capa</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex min-w-[170px] flex-1 overflow-hidden border border-line" role="group" aria-label="Capa de datos del mapa">
+            {[
+              { m: "local", l: "2026 · Local" },
+              { m: "live", l: "USGS · En vivo" },
+              { m: "both", l: "Ambos" },
+            ].map((o) => (
+              <button
+                key={o.m}
+                onClick={() => setMapMode(o.m as MapMode)}
+                aria-pressed={mapMode === o.m}
+                title={
+                  o.m === "local"
+                    ? "Catálogo 2026 con datos locales"
+                    : o.m === "live"
+                      ? "Sismos reales del USGS (últimos 30 días)"
+                      : "Ambas capas superpuestas"
+                }
+                className={`chip-btn flex-1 px-1 py-1.5 font-mono text-[10px] uppercase transition-colors sm:px-3 sm:text-[11px] md:flex-none ${
+                  mapMode === o.m
+                    ? "bg-amber text-abyss"
+                    : "bg-panel text-fog hover:text-bone"
+                }`}
+              >
+                <span className="sm:hidden">
+                  {o.m === "live" ? "En vivo" : o.m === "local" ? "Local" : "Ambos"}
+                </span>
+                <span className="hidden sm:inline">{o.l}</span>
+                {o.m !== "local" && (
+                  <span className="ml-1.5 opacity-80">
+                    · {liveStatus === "loading" ? "···" : liveQuakes.length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+          <span className="border border-line bg-panel px-2.5 py-1.5 font-mono text-[10px] tracking-widest text-jade sm:text-[11px]">
+            {filtered.length} EVENTOS
+          </span>
+          <button
+            onClick={refreshLive}
+            aria-label="Actualizar datos del USGS"
+            title="Actualizar datos del USGS"
+            className="chip-btn grid h-[30px] w-[30px] shrink-0 place-items-center border border-line bg-panel text-fog hover:border-teal hover:text-teal"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              className={liveStatus === "loading" ? "animate-spin" : ""}
+            >
+              <path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.5v3h-3" />
+            </svg>
+          </button>
+        </div>
+      </div>
     </div>
-  );
+    );
+  };
 
   return (
     <div className="relative min-h-screen">
@@ -473,7 +490,7 @@ export default function App() {
 
       {/* ---------- apertura ---------- */}
       <section className="relative z-10 mx-auto max-w-[1400px] px-4 pt-12 pb-10 sm:px-6 sm:pt-16">
-        <div ref={introRef} className="rv grid gap-10 lg:grid-cols-12">
+        <div ref={introRef} className="rv grid grid-cols-1 gap-10 lg:grid-cols-12">
           <div className="lg:col-span-7">
             <div className="flex items-center gap-3 font-mono text-[11px] tracking-[0.24em] text-amber uppercase">
               <span className="inline-block h-px w-10 bg-amber" />
@@ -489,15 +506,15 @@ export default function App() {
               mundo en 2026, con su magnitud, intensidad, víctimas y costo estimado. Haz clic en cualquier
               punto del mapa para abrir su ficha.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-8 grid grid-cols-3 gap-3 sm:flex sm:flex-wrap sm:gap-3">
               {[
                 { v: fmt(ANNUAL.deaths), l: "víctimas fatales", c: "#f0603c" },
                 { v: String(ANNUAL.m7), l: "sismos M7 o más", c: "#f59e42" },
                 { v: "M7.8", l: "máxima magnitud", c: "#e23a62" },
               ].map((s, i) => (
-                <div key={s.l} className={`rv rv-d${i + 1} border border-line bg-panel px-5 py-3`}>
-                  <div className="font-display text-3xl leading-none" style={{ color: s.c }}>{s.v}</div>
-                  <div className="mt-1 font-mono text-[9px] tracking-[0.2em] text-dim uppercase">{s.l}</div>
+                <div key={s.l} className={`rv rv-d${i + 1} min-w-0 border border-line bg-panel px-2 py-3 sm:px-5`}>
+                  <div className="font-display text-2xl leading-none sm:text-3xl" style={{ color: s.c }}>{s.v}</div>
+                  <div className="mt-1 font-mono text-[9px] leading-snug tracking-[0.2em] text-dim uppercase break-words">{s.l}</div>
                 </div>
               ))}
             </div>
@@ -612,7 +629,7 @@ export default function App() {
         />
 
         <div className="grid grid-cols-1 gap-4 lg:h-[620px] lg:grid-cols-12">
-          <div className="h-[58vw] max-h-[500px] min-h-[280px] sm:h-[500px] lg:col-span-7 lg:h-full">
+          <div className="h-[65vh] min-h-[340px] max-h-[580px] sm:h-[500px] lg:col-span-7 lg:h-full">
             <WorldMap
               quakes={filtered}
               selectedId={selectedId}
@@ -849,20 +866,28 @@ export default function App() {
             title="BITÁCORA DEL AÑO"
             sub="Los eventos destacados del año, ordenables por fecha, magnitud, profundidad, víctimas o costo. Toca una fila para localizarla en el mapa."
           />
-          <div className="mb-4 flex flex-wrap items-center gap-2">
+          <div className="mb-4 grid grid-cols-2 items-center gap-2 md:flex md:flex-wrap">
             <button
               onClick={() => downloadQuakesCSV(filtered)}
-              className="chip-btn border border-line bg-panel px-4 py-2 font-mono text-[11px] tracking-[0.18em] text-fog uppercase hover:border-amber hover:text-amber"
+              className="chip-btn flex min-w-0 items-center justify-center gap-1.5 overflow-hidden border border-line bg-panel px-2.5 py-2 font-mono text-[11px] tracking-[0.18em] text-fog uppercase hover:border-amber hover:text-amber"
             >
-              ⬇ Exportar CSV
+              ⬇
+              <span className="min-w-0 truncate">
+                <span className="sm:hidden">CSV</span>
+                <span className="hidden sm:inline">Exportar CSV</span>
+              </span>
             </button>
             <button
               onClick={() => downloadQuakesGeoJSON(filtered)}
-              className="chip-btn border border-line bg-panel px-4 py-2 font-mono text-[11px] tracking-[0.18em] text-fog uppercase hover:border-amber hover:text-amber"
+              className="chip-btn flex min-w-0 items-center justify-center gap-1.5 overflow-hidden border border-line bg-panel px-2.5 py-2 font-mono text-[11px] tracking-[0.18em] text-fog uppercase hover:border-amber hover:text-amber"
             >
-              ⬇ Exportar GeoJSON
+              ⬇
+              <span className="min-w-0 truncate">
+                <span className="sm:hidden">GeoJSON</span>
+                <span className="hidden sm:inline">Exportar GeoJSON</span>
+              </span>
             </button>
-            <span className="ml-auto font-mono text-[10px] tracking-widest text-dim uppercase">
+            <span className="col-span-2 font-mono text-[10px] tracking-widest text-dim uppercase md:ml-auto">
               {filtered.length} registros filtrados
             </span>
           </div>

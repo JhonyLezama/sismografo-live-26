@@ -259,6 +259,17 @@ export default function WorldMap({
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  const lockPortrait = () => {
+    const orient = screen.orientation as unknown as { lock?: (o: string) => Promise<void> };
+    try {
+      if (typeof orient.lock === "function") {
+        void orient.lock("portrait").catch(() => {});
+      }
+    } catch {
+      /* sin soporte de orientación */
+    }
+  };
+
   const toggleFullscreen = () => {
     const el = wrapRef.current;
     if (!el) return;
@@ -278,11 +289,21 @@ export default function WorldMap({
     if (document.fullscreenElement && typeof document.exitFullscreen === "function") {
       void document.exitFullscreen();
     }
+    try {
+      const orient = screen.orientation as unknown as { unlock?: () => void };
+      if (typeof orient.unlock === "function") orient.unlock();
+    } catch {
+      /* sin soporte de orientación */
+    }
     setIsFullscreen(false);
   };
 
   useEffect(() => {
-    const sync = () => setIsFullscreen(!!document.fullscreenElement);
+    const sync = () => {
+      const fs = !!document.fullscreenElement;
+      setIsFullscreen(fs);
+      if (fs) lockPortrait();
+    };
     document.addEventListener("fullscreenchange", sync);
     return () => document.removeEventListener("fullscreenchange", sync);
   }, []);
@@ -555,7 +576,7 @@ export default function WorldMap({
   return (
     <div
       ref={wrapRef}
-      className={`relative overflow-hidden rounded-md border border-line bg-deep ${isFullscreen ? "map-fullscreen" : ""}`}
+      className={`relative h-full overflow-hidden rounded-md border border-line bg-deep ${isFullscreen ? "map-fullscreen" : ""}`}
     >
       <svg
         ref={svgRef}
@@ -892,9 +913,9 @@ export default function WorldMap({
             aria-label={b.label}
             title={b.label}
             onClick={b.fn}
-            className="chip-btn grid h-8 w-8 place-items-center border border-line bg-panel/90 text-fog hover:border-amber hover:text-amber"
+            className="chip-btn grid h-7 w-7 place-items-center border border-line bg-panel/90 sm:h-8 sm:w-8 text-fog hover:border-amber hover:text-amber"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth="1.6" strokeLinecap="round">
               {b.icon}
             </svg>
           </button>
@@ -915,11 +936,11 @@ export default function WorldMap({
               ? "Cancelar marcado de área (Esc)"
               : "Marcar área: arrastra sobre el mapa para filtrar la zona"
           }
-          className={`chip-btn grid h-8 w-8 place-items-center border border-line bg-panel/90 text-fog hover:border-amber hover:text-amber ${
+          className={`chip-btn grid h-7 w-7 place-items-center border border-line bg-panel/90 sm:h-8 sm:w-8 text-fog hover:border-amber hover:text-amber ${
             selectMode ? "border-amber text-amber" : ""
           }`}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M4 3h8v10H4z" strokeDasharray="2 2" />
             <circle cx="8" cy="8" r="1.6" fill="currentColor" stroke="none" />
           </svg>
@@ -929,9 +950,9 @@ export default function WorldMap({
             onClick={() => onAreaChange?.(null)}
             aria-label="Limpiar zona marcada"
             title="Limpiar zona marcada"
-            className="chip-btn grid h-8 w-8 place-items-center border border-line bg-panel/90 text-fog hover:border-verm hover:text-verm"
+            className="chip-btn grid h-7 w-7 place-items-center border border-line bg-panel/90 sm:h-8 sm:w-8 text-fog hover:border-verm hover:text-verm"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth="1.6" strokeLinecap="round">
               <path d="M3 3l10 10M13 3L3 13" />
             </svg>
           </button>
@@ -941,11 +962,11 @@ export default function WorldMap({
           aria-pressed={showPlates}
           aria-label={showPlates ? "Ocultar límites de placas" : "Mostrar límites de placas"}
           title={showPlates ? "Ocultar límites de placas" : "Mostrar límites de placas"}
-          className={`chip-btn grid h-8 w-8 place-items-center border border-line bg-panel/90 text-fog hover:border-amber hover:text-amber ${
+          className={`chip-btn grid h-7 w-7 place-items-center border border-line bg-panel/90 sm:h-8 sm:w-8 text-fog hover:border-amber hover:text-amber ${
             showPlates ? "border-amber text-amber" : ""
           }`}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth="1.5" strokeLinecap="round">
             <path d="M8 2l5.5 3v6L8 14l-5.5-3V5L8 2z" />
             <path d="M8 2v12M2.5 5l5.5 3 5.5-3" />
           </svg>
@@ -954,9 +975,9 @@ export default function WorldMap({
           onClick={toggleFullscreen}
           aria-label={isFullscreen ? "Salir de pantalla completa" : "Ver en pantalla completa"}
           title={isFullscreen ? "Salir de pantalla completa (Esc)" : "Ver en pantalla completa"}
-          className="chip-btn grid h-8 w-8 place-items-center border border-line bg-panel/90 text-fog hover:border-amber hover:text-amber"
+          className="chip-btn grid h-7 w-7 place-items-center border border-line bg-panel/90 sm:h-8 sm:w-8 text-fog hover:border-amber hover:text-amber"
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
             {isFullscreen ? (
               <path d="M4 9h3v3M12 7H9V4M4 7h3V4M12 9H9v3" />
             ) : (
@@ -967,7 +988,7 @@ export default function WorldMap({
       </div>
 
       {/* leyenda */}
-      <div className="absolute bottom-3 left-3 flex max-w-[calc(100%-7.5rem)] flex-wrap items-center gap-3 border border-line bg-abyss/85 px-3 py-2">
+      <div className="absolute bottom-2 left-3 flex max-w-[calc(100%-3rem)] flex-wrap items-center gap-3 border border-line bg-abyss/85 px-3 py-2 sm:max-w-[calc(100%-14rem)]">
         <span className="font-mono text-[10px] tracking-[0.18em] text-dim uppercase">Mw</span>
         {[
           { m: "5", c: "#e8c14a" },
@@ -1018,12 +1039,12 @@ export default function WorldMap({
       </div>
 
       {/* exportar el mapa como imagen */}
-      <div className="absolute bottom-14 right-3 flex flex-col gap-1.5">
+      <div className="absolute bottom-16 left-3 flex gap-1.5 sm:bottom-14 sm:flex-col">
         <button
           onClick={() => downloadMap("png")}
           title="Descargar el mapa como PNG"
           aria-label="Descargar el mapa como PNG"
-          className="chip-btn border border-line bg-abyss/90 px-2 py-1 font-mono text-[10px] tracking-widest text-dim uppercase hover:border-teal hover:text-teal"
+          className="chip-btn border border-line bg-abyss/90 px-1.5 py-0.5 font-mono text-[9px] tracking-widest text-dim uppercase hover:border-teal hover:text-teal sm:px-2 sm:py-1 sm:text-[10px]"
         >
           PNG
         </button>
@@ -1031,7 +1052,7 @@ export default function WorldMap({
           onClick={() => downloadMap("svg")}
           title="Descargar el mapa como SVG"
           aria-label="Descargar el mapa como SVG"
-          className="chip-btn border border-line bg-abyss/90 px-2 py-1 font-mono text-[10px] tracking-widest text-dim uppercase hover:border-teal hover:text-teal"
+          className="chip-btn border border-line bg-abyss/90 px-1.5 py-0.5 font-mono text-[9px] tracking-widest text-dim uppercase hover:border-teal hover:text-teal sm:px-2 sm:py-1 sm:text-[10px]"
         >
           SVG
         </button>

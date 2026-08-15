@@ -65,8 +65,8 @@ export default function Registry({ quakes, onPick }: Props) {
   return (
     <div>
       {/* búsqueda libre */}
-      <div className="mb-3 flex flex-wrap items-center gap-3">
-        <label className="relative flex min-w-0 flex-1 items-center gap-2 border border-line bg-panel px-3 py-2">
+      <div className="mb-3 grid gap-2 md:flex md:flex-wrap md:items-center md:gap-3">
+        <label className="relative flex min-w-0 items-center gap-2 border border-line bg-panel px-3 py-2 md:flex-1">
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="shrink-0 text-dim">
             <circle cx="7" cy="7" r="5" />
             <path d="M11 11l3.5 3.5" />
@@ -94,18 +94,17 @@ export default function Registry({ quakes, onPick }: Props) {
       </div>
 
       {/* orden · móvil */}
-      <div className="mb-3 flex flex-wrap items-center gap-1.5 md:hidden">
-        <span className="font-mono text-[10px] tracking-[0.2em] text-dim uppercase">Ordenar</span>
+      <div className="mb-3 grid grid-cols-3 gap-1.5 md:hidden">
         {MOBILE_SORTS.map((s) => (
           <button
             key={s.key}
             onClick={() => toggleSort(s.key)}
-            className={`chip-btn border px-2.5 py-1 font-mono text-[11px] tracking-wider uppercase ${
+            className={`chip-btn flex min-w-0 items-center justify-center gap-1 border px-1 py-1.5 font-mono text-[10px] tracking-wider uppercase ${
               sortKey === s.key ? "border-amber bg-amber/15 text-amber" : "border-line text-fog"
             }`}
           >
-            {s.label}
-            {sortKey === s.key && (dir === 1 ? " ↑" : " ↓")}
+            <span className="truncate">{s.label}</span>
+            {sortKey === s.key && <span>{dir === 1 ? "↑" : "↓"}</span>}
           </button>
         ))}
       </div>

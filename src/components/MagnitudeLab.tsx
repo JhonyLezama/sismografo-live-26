@@ -73,14 +73,14 @@ export default function MagnitudeLab() {
       {/* laboratorio */}
       <div ref={labRef} className="rv space-y-4">
         <div className="border border-line bg-panel p-5 sm:p-7">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
+          <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-end sm:justify-between sm:gap-4">
+            <div className="min-w-0">
               <div className="font-mono text-[10px] tracking-[0.2em] text-dim uppercase">Laboratorio de magnitud</div>
               <div className="mt-1 font-display text-7xl leading-none sm:text-8xl" style={{ color: c }}>
                 {m.toFixed(1)}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex-1 sm:max-w-lg lg:grid-cols-4">
               {[
                 { l: "Energía", v: fmtEnergy(m) },
                 { l: "Equiv. TNT", v: fmtTNT(m) },
@@ -127,7 +127,7 @@ export default function MagnitudeLab() {
               <button
                 key={p.label}
                 onClick={() => setM(p.m)}
-                className={`chip-btn border px-3 py-1.5 font-mono text-[11px] tracking-wider uppercase ${
+                className={`chip-btn min-w-0 flex-1 basis-[45%] truncate border px-2 py-1.5 font-mono text-[10px] tracking-wider uppercase sm:flex-none sm:px-3 sm:text-[11px] ${
                   Math.abs(m - p.m) < 0.05
                     ? "border-amber bg-amber/15 text-amber"
                     : "border-line text-fog hover:border-fog hover:text-bone"
