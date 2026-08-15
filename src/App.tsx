@@ -1,6 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Region, Quake } from "./data/quakes";
-import { QUAKES, ANNUAL, fmt, MONTHS_ES, magColor, depthClass } from "./data/quakes";
+import { QUAKES, ANNUAL, fmt, MONTHS_ES, magColor, depthClass, CATALOG_FIRST, CATALOG_LAST } from "./data/quakes";
 import type { MapMode, AreaRect } from "./components/WorldMap";
 import BottomSheet from "./components/BottomSheet";
 import { fetchLiveQuakes, timeAgo, feedUrl, loadLiveCache, USGS_WINDOWS } from "./data/usgs";
@@ -519,6 +519,9 @@ export default function App() {
               </svg>
             </button>
           </div>
+          <span className="w-fit border border-line bg-panel px-2.5 py-1.5 font-mono text-[9px] tracking-widest text-dim uppercase">
+            Catálogo 2026 · corte {CATALOG_LAST}
+          </span>
         </div>
       </div>
     </div>
@@ -719,7 +722,7 @@ export default function App() {
         <SectionHead
           num="01 · Epicentros"
           title="EL MAPA DEL TEMBLOR"
-          sub="Proyección Natural Earth con los epicentros de 2026. El tamaño y el color de cada punto siguen la magnitud de momento (Mw). Rueda para hacer zoom, arrastra para moverte."
+          sub={`Proyección Natural Earth con los epicentros del catálogo 2026 (${CATALOG_FIRST} – ${CATALOG_LAST}). El tamaño y el color de cada punto siguen la magnitud de momento (Mw). Rueda para hacer zoom, arrastra para moverte.`}
         />
 
         <div ref={dashRef} className="rv mb-5 hidden lg:block">{renderFilters(false)}</div>
@@ -1033,7 +1036,7 @@ export default function App() {
           <SectionHead
             num="02 · Registro completo"
             title="BITÁCORA DEL AÑO"
-            sub="Los eventos destacados del año, ordenables por fecha, magnitud, profundidad, víctimas o costo. Toca una fila para localizarla en el mapa."
+            sub={`Los eventos destacados del catálogo 2026 (${CATALOG_FIRST} – ${CATALOG_LAST}), ordenables por fecha, magnitud, profundidad, víctimas o costo. Toca una fila para localizarla en el mapa.`}
           />
           <div className="mb-4 grid grid-cols-2 items-center gap-2 md:flex md:flex-wrap">
             <button
@@ -1086,7 +1089,7 @@ export default function App() {
         <SectionHead
           num="04 · Balance"
           title="LA FACTURA DE 2026"
-          sub="Contadores del año, ritmo mensual de sismos mayores y víctimas, y el impacto económico preliminar reportado hasta el 15 de agosto."
+          sub={`Contadores del año, ritmo mensual de sismos mayores y víctimas, y el impacto económico preliminar del catálogo 2026 (${CATALOG_FIRST} – ${CATALOG_LAST}).`}
         />
         <div ref={balRef} className="rv">
           <Suspense fallback={<SectionSkeleton />}>
@@ -1143,7 +1146,7 @@ export default function App() {
                 SysJoL
               </a>
             </span>
-            <span>React · d3-geo · datos abiertos</span>
+            <span>Catálogo 2026 · corte {CATALOG_LAST}</span>
           </div>
         </div>
       </footer>

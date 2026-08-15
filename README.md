@@ -80,7 +80,7 @@ public/
 
 ## 📦 Datos
 
-- **Catálogo local 2026**: 29 eventos de referencia embebidos (`src/data/quakes.ts`).
+- **Catálogo local 2026**: 29 eventos de referencia embebidos (`src/data/quakes.ts`), **cubiertos del 2 Ene al 14 Ago 2026**. Es un catálogo curado (víctimas, coste, MMI) y por tanto **estático**: el rango se muestra en la app como "corte". Lo que se actualiza día a día es el **feed en vivo del USGS**.
 - **USGS Earthquake Hazards Program**: feed GeoJSON de sismos M≥4.5 (`4.5_1h`, `4.5_24h`, `4.5_7d`, `4.5_30d`). Sin claves ni intermediarios. Dominio público.
 
 ## 🖥️ PWA e instalación

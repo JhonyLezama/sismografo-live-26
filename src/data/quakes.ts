@@ -669,6 +669,9 @@ export const dateShort = (iso: string) => {
   return `${d.getUTCDate()} ${MONTHS_ES[d.getUTCMonth()]}`;
 };
 
+export const CATALOG_FIRST = dateShort(QUAKES[0].date);
+export const CATALOG_LAST = dateShort(QUAKES[QUAKES.length - 1].date);
+
 export const magColor = (m: number) => {
   if (m >= 8) return "#e23a62";
   if (m >= 7) return "#f0603c";
