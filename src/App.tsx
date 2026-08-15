@@ -9,6 +9,7 @@ import { downloadLiveCSV, downloadQuakesCSV, downloadQuakesGeoJSON } from "./dat
 import Ticker from "./components/Ticker";
 import Seismograph from "./components/Seismograph";
 import YearPlayer from "./components/YearPlayer";
+import InstallBanner from "./components/InstallBanner";
 import { useScramble, useUtcClock, useReveal, usePrefersReducedMotion, useMediaQuery } from "./hooks";
 
 /* secciones pesadas cargadas bajo demanda (código dividido por chunks) */
@@ -1117,6 +1118,9 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* aviso de instalación PWA (aparece tras 2 min, una vez) */}
+      <InstallBanner />
 
       {/* alerta de sismo grande en vivo */}
       {liveAlerts.length > 0 && (

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export function useMediaQuery(query: string) {
   const [matches, setMatches] = useState(
@@ -127,4 +127,79 @@ export function useUtcClock() {
   }, []);
   const p = (n: number) => String(n).padStart(2, "0");
   return `${p(now.getUTCHours())}:${p(now.getUTCMinutes())}:${p(now.getUTCSeconds())} UTC`;
+}
+
+/* ---------- PWA: instalación ---------- */
+
+/* el tipo del evento de instalación no existe en los tipos DOM estándar */
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+}
+
+const INSTALL_STORAGE_KEY = "sismografo-install-dismissed";
+
+export function useInstallPrompt() {
+  const [installEvt, setInstallEvt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [installed, setInstalled] = useState(false);
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return window.localStorage.getItem(INSTALL_STORAGE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+
+  const isIos = useMemo(() => {
+    const ua = window.navigator.userAgent;
+    return (
+      /iphone|ipad|ipod/i.test(ua) ||
+      (/macintosh/i.test(ua) && window.navigator.maxTouchPoints > 1 && !("MSStream" in window))
+    );
+  }, []);
+
+  const standalone =
+    useMediaQuery("(display-mode: standalone), (display-mode: minimal-ui), (display-mode: fullscreen)") ||
+    !!(window.navigator as unknown as { standalone?: boolean }).standalone;
+
+  useEffect(() => {
+    const onBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setInstallEvt(e as BeforeInstallPromptEvent);
+    };
+    const onInstalled = () => setInstalled(true);
+    const win = window as unknown as EventTarget;
+    win.addEventListener("beforeinstallprompt", onBeforeInstall);
+    win.addEventListener("appinstalled", onInstalled);
+    return () => {
+      win.removeEventListener("beforeinstallprompt", onBeforeInstall);
+      win.removeEventListener("appinstalled", onInstalled);
+    };
+  }, []);
+
+  const install = useCallback(async () => {
+    if (!installEvt) return;
+    await installEvt.prompt();
+    const choice = await installEvt.userChoice;
+    if (choice.outcome === "accepted") setInstalled(true);
+    setInstallEvt(null);
+  }, [installEvt]);
+
+  const dismiss = useCallback(() => {
+    setDismissed(true);
+    setInstallEvt(null);
+    try {
+      window.localStorage.setItem(INSTALL_STORAGE_KEY, "1");
+    } catch {
+      /* almacenamiento bloqueado: se ignora */
+    }
+  }, []);
+
+  return {
+    canPrompt: !!installEvt && !standalone && !installed && !dismissed,
+    canInstall: isIos && !standalone && !installed && !dismissed,
+    isIos,
+    install,
+    dismiss,
+  };
 }
