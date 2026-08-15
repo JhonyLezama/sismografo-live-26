@@ -1,0 +1,39 @@
+name: Actualizar datos del catalogo
+
+on:
+  schedule:
+    - cron: "3 0 * * *" # diario 00:03 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: "data-update"
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Sincronizar con USGS
+        run: node scripts/update-catalog.mjs
+
+      - name: Crear o actualizar PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: data/update-catalog
+          title: "data: actualización automática del catálogo"
+          commit-message: "data: actualización automática del catálogo"
+          body-path: data-update-report.md
+          delete-branch: true
+          token: ${{ secrets.GITHUB_TOKEN }}
