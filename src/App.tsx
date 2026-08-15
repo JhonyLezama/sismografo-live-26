@@ -484,7 +484,7 @@ export default function App() {
                       ? "Sismos reales del USGS (últimos 30 días), filtrados por magnitud, profundidad y zona"
                       : "Ambas capas superpuestas"
                 }
-                className={`chip-btn flex-1 px-1 py-1.5 font-mono text-[10px] uppercase transition-colors sm:px-3 sm:text-[11px] md:flex-none ${
+                className={`chip-btn flex min-w-0 items-center justify-center gap-1 overflow-hidden px-1 py-1.5 font-mono text-[10px] uppercase transition-colors sm:px-3 sm:text-[11px] ${
                   mapMode === o.m
                     ? "bg-amber text-abyss"
                     : "bg-panel text-fog hover:text-bone"
@@ -493,9 +493,9 @@ export default function App() {
                 <span className="sm:hidden">
                   {o.m === "live" ? "En vivo" : o.m === "local" ? "Local" : "Ambos"}
                 </span>
-                <span className="hidden sm:inline">{o.l}</span>
+                <span className="hidden min-w-0 truncate sm:inline">{o.l}</span>
                 {o.m !== "local" && (
-                  <span className="ml-1.5 opacity-80">
+                  <span className="shrink-0 opacity-80">
                     · {liveStatus === "loading" ? "···" : filteredLive.length}
                   </span>
                 )}
