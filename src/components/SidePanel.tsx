@@ -7,10 +7,11 @@ import type { WikiSuggestion } from "../data/wikiSuggest";
 import { loadWikiSuggestions, wikiAcceptedUrl, acceptWiki, wikiDismissed, dismissWiki } from "../data/wikiSuggest";
 import Seismograph from "./Seismograph";
 
-/* ---- ficha de evento EN VIVO (USGS) ---- */
+/* ---- ficha de evento EN VIVO (USGS / EMSC) ---- */
 export function LiveDetail({ q, onClose }: { q: LiveQuake; onClose: () => void }) {
   const c = magColor(q.mag);
   const bars = 10 + Math.round((q.mag - 4) * 12);
+  const emsc = q.id.startsWith("emsc-");
   return (
     <div className="border border-teal/40 bg-panel">
       <div className="flex items-start justify-between gap-3 border-b border-teal/30 bg-deep/60 p-4 sm:p-5">
@@ -21,7 +22,7 @@ export function LiveDetail({ q, onClose }: { q: LiveQuake; onClose: () => void }
               <span className="relative inline-flex h-2 w-2 rounded-full bg-teal" />
             </span>
             <span className="font-mono text-[10px] font-semibold tracking-[0.22em] text-teal uppercase">
-              Registro en vivo · USGS
+              Registro en vivo · {emsc ? "EMSC" : "USGS"}
             </span>
           </div>
           <h3 className="mt-2 font-display text-2xl leading-tight tracking-wide text-bone">{q.country}</h3>
@@ -61,7 +62,7 @@ export function LiveDetail({ q, onClose }: { q: LiveQuake; onClose: () => void }
             { k: "Profundidad", v: `${q.depth} km` },
             { k: "Hora (UTC)", v: fmtUtc(q.time) },
             { k: "Antigüedad", v: timeAgo(q.time) },
-            { k: "Índice de impacto", v: `${q.sig} / 1000` },
+            { k: "Índice de impacto", v: emsc ? "—" : `${q.sig} / 1000` },
             { k: "Alerta tsunami", v: q.tsunami ? "SÍ EMITIDA" : "No" },
           ].map((row) => (
             <div key={row.k} className="border border-line/70 bg-deep/50 px-3 py-2">
@@ -79,20 +80,20 @@ export function LiveDetail({ q, onClose }: { q: LiveQuake; onClose: () => void }
           rel="noreferrer"
           className="group mt-4 flex items-center justify-between border border-teal/50 bg-teal/10 px-4 py-3 text-sm font-semibold text-teal transition-colors hover:bg-teal/20"
         >
-          Ver ficha oficial en USGS
+          {emsc ? "Ver ficha oficial en EMSC" : "Ver ficha oficial en USGS"}
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
             <path d="M3 11L11 3M5 3h6v6" />
           </svg>
         </a>
         <p className="mt-3 font-mono text-[10px] leading-relaxed tracking-wider text-dim uppercase">
-          Fuente: USGS Earthquake Hazards Program
+          Fuente: {emsc ? "EMSC · European-Mediterranean Seismological Centre" : "USGS Earthquake Hazards Program"}
         </p>
       </div>
     </div>
   );
 }
 
-/* ---- lista de eventos EN VIVO (USGS) ---- */
+/* ---- lista de eventos EN VIVO (USGS / EMSC) ---- */
 export function LiveList({
   quakes,
   onSelect,
@@ -102,6 +103,7 @@ export function LiveList({
   onSelect: (id: string) => void;
   alertIds?: Set<string>;
 }) {
+  const hasEmsc = quakes.some((q) => q.id.startsWith("emsc-"));
   return (
     <aside className="flex h-full min-h-0 flex-col border border-teal/40 bg-panel">
       <div className="flex items-start justify-between gap-3 border-b border-teal/30 bg-deep/60 px-4 py-3">
@@ -111,7 +113,7 @@ export function LiveList({
               <span className="ping-slow absolute inline-flex h-full w-full rounded-full bg-teal opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-teal" />
             </span>
-            PULSO EN VIVO · USGS
+            {hasEmsc ? "PULSO EN VIVO · USGS + EMSC" : "PULSO EN VIVO · USGS"}
           </div>
           <h3 className="mt-1 font-display text-xl tracking-wide text-bone">ÚLTIMOS EVENTOS</h3>
         </div>

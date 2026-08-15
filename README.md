@@ -27,7 +27,7 @@ Observatorio sísmico interactivo con el catálogo de terremotos de 2026 y la al
 | | Sección | Descripción |
 | --- | --- | --- |
 | 🗺️ | **01 · El mapa del temblor** | Proyección Natural Earth, zoom y arrastre, marcadores con tamaño/color según magnitud Mw, capas `Local 2026 · USGS En vivo · Ambas`, selección de área arrastrando sobre el mapa y exportación a **PNG/SVG** (9:16 en móvil). |
-| 📡 | **01·B · Pulso en tiempo real** | Sismos M≥4.5 de una ventana configurable (1 h · 24 h · 7 d · 30 d), actualización cada 5 min, caché offline y **alertas** de eventos nuevos M≥6 con sonido opcional (persistido en `localStorage`). |
+| 📡 | **01·B · Pulso en tiempo real** | Sismos M≥4.5 de una ventana configurable (1 h · 24 h · 7 d · 30 d), actualización cada 5 min, caché offline y **alertas** de eventos nuevos M≥6 con sonido opcional (persistido en `localStorage`). **Fuente elegible**: USGS · EMSC · Ambas (en «Ambas» se combinan y deduplican; los eventos solo-EMSC se marcan en violeta). |
 | 🚨 | **01·C · Capa GDACS** | Alertas sísmicas del centro europeo de alertas (GDACS): los eventos **Red/Orange** se marcan en el mapa con pulso y leyenda propia; el snapshot se refresca a diario por el workflow de datos. |
 | 📋 | **02 · Bitácora del año** | Registro completo con buscador (sin acentos), filtros por magnitud/región/mes/profundidad y exportación a CSV/GeoJSON. |
 | ⚖️ | **02·B · Balance** | Contadores del año: eventos M4+, víctimas, sismos M7+, coste estimado y países afectados. |
@@ -60,6 +60,7 @@ src/
     ├── quakes.json            # catálogo 2026 (28 eventos, curado) + vínculos USGS
     ├── quakes.ts              # interfaz del catálogo y helpers
     ├── usgs.ts                # cliente del feed USGS (fetch + caché offline) + detalle PAGER
+    ├── emsc.ts                # cliente del feed EMSC (seismicportal.eu) + dedupe al combinar
     ├── gdacs.ts               # cliente de la capa GDACS (snapshot público)
     ├── wikiSuggest.ts         # sugerencias de Wikipedia + flujo Aceptar/Descartar
     ├── export.ts              # CSV / GeoJSON / blobs
@@ -117,6 +118,7 @@ Los campos **curados a mano** (fallecidos, heridos, coste, resumen, placas, tag)
 
 - **Catálogo local 2026**: 28 eventos de referencia en `src/data/quakes.json`, del **2 Ene al 14 Ago 2026** (22 vinculados a su ficha USGS). Es un catálogo **curado** (víctimas, coste, MMI, resumen) y el script de datos solo lo enriquece: nunca sobrescribe lo curado a mano. Lo que se actualiza día a día es el **feed en vivo del USGS** y los snapshots de **GDACS** y **Wikipedia**.
 - **USGS Earthquake Hazards Program**: feed GeoJSON de sismos M≥4.5 (`4.5_1h`, `4.5_24h`, `4.5_7d`, `4.5_30d`) y detalle por evento (PAGER). Sin claves ni intermediarios. Dominio público.
+- **EMSC (Centro Sismológico Euromediterráneo)**: API pública `seismicportal.eu` (FDSNWS, sin clave) como fuente alternativa/complementaria del feed en vivo, con ficha y enlace oficial al evento.
 - **GDACS (JRC UE)**: RSS semanal de alertas por tipo de desastre; aquí se usan los sísmicos (`EQ`) para marcar en el mapa las alertas Red/Orange.
 - **Wikipedia (es)**: la sincronización consulta la API pública (`action=query`) solo para *proponer* enlaces; la aceptación la haces tú en la ficha del evento.
 

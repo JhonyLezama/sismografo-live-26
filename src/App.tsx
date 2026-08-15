@@ -6,6 +6,8 @@ import BottomSheet from "./components/BottomSheet";
 import MobileNav from "./components/MobileNav";
 import { fetchLiveQuakes, timeAgo, feedUrl, loadLiveCache, USGS_WINDOWS } from "./data/usgs";
 import type { LiveQuake, LiveWindow } from "./data/usgs";
+import { fetchEmscLive, mergeSources } from "./data/emsc";
+import type { LiveSource } from "./data/emsc";
 import type { GdacsAlert } from "./data/gdacs";
 import { loadGdacs } from "./data/gdacs";
 import { downloadLiveCSV, downloadQuakesCSV, downloadQuakesGeoJSON } from "./data/export";
@@ -224,6 +226,9 @@ export default function App() {
   const [liveStale, setLiveStale] = useState(false);
   const [liveStatus, setLiveStatus] = useState<"loading" | "ok" | "error">("loading");
   const [liveWindow, setLiveWindow] = useState<LiveWindow>("month");
+  const [liveSource, setLiveSource] = useState<LiveSource>("usgs");
+  const liveSourceRef = useRef(liveSource);
+  liveSourceRef.current = liveSource;
   const [liveAlerts, setLiveAlerts] = useState<LiveQuake[]>([]);
   const [soundOn, setSoundOn] = useState<boolean>(() => localStorage.getItem("sismografo-sound") === "1");
   const knownIdsRef = useRef<Set<string> | null>(null);
@@ -252,23 +257,33 @@ export default function App() {
 
   const refreshLive = useCallback(() => {
     setLiveStatus("loading");
-    fetchLiveQuakes(liveWindow)
-      .then(({ quakes, updated, stale }) => {
+    const src = liveSourceRef.current;
+    const tasks: Promise<{
+      quakes: LiveQuake[];
+      updated: number;
+      stale: boolean;
+    }>[] = [fetchLiveQuakes(liveWindow)];
+    if (src !== "usgs") tasks.push(fetchEmscLive());
+    Promise.all(tasks)
+      .then(([usgsRes, emscRes]) => {
+        const emsc = emscRes?.quakes ?? [];
         const prev = knownIdsRef.current;
         const isFirst = prev === null;
-        knownIdsRef.current = new Set(quakes.map((q) => q.id));
+        knownIdsRef.current = new Set(usgsRes.quakes.map((q) => q.id));
         let fresh: LiveQuake[] = [];
-        if (!isFirst && !stale) {
-          fresh = quakes.filter((q) => q.mag >= 6 && !prev.has(q.id));
+        if (!isFirst && !usgsRes.stale) {
+          fresh = usgsRes.quakes.filter((q) => q.mag >= 6 && !prev.has(q.id));
           if (fresh.length > 0) {
             const ids = new Set(fresh.map((q) => q.id));
             setLiveAlerts((cur) => [...fresh, ...cur.filter((a) => !ids.has(a.id))]);
             if (soundOnRef.current) playAlertSound(fresh);
           }
         }
+        const quakes =
+          src === "emsc" ? emsc : src === "both" ? mergeSources(usgsRes.quakes, emsc) : usgsRes.quakes;
         setLiveQuakes(quakes);
-        setLiveUpdated(updated);
-        setLiveStale(!!stale);
+        setLiveUpdated(src === "emsc" ? (emscRes?.updated ?? usgsRes.updated) : usgsRes.updated);
+        setLiveStale(src === "emsc" ? (emscRes?.stale ?? usgsRes.stale) : usgsRes.stale || !!emscRes?.stale);
         setLiveStatus("ok");
       })
       .catch(() => setLiveStatus("error"));
@@ -279,7 +294,7 @@ export default function App() {
     const id = window.setInterval(refreshLive, 5 * 60 * 1000);
     return () => window.clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [liveWindow]);
+  }, [liveWindow, liveSource]);
 
   useEffect(() => {
     try {
@@ -806,6 +821,7 @@ export default function App() {
                 onSelect={onSelect}
                 liveQuakes={filteredLive}
                 mode={mapMode}
+                liveSource={liveSource}
                 liveSelectedId={liveSel}
                 onSelectLive={onSelectLive}
                 gdacs={gdacsAlerts}
@@ -875,7 +891,7 @@ export default function App() {
         <SectionHead
           num="01·B · Alimentación en vivo"
           title="PULSO EN TIEMPO REAL"
-          sub="Conexión directa a la API abierta del USGS Earthquake Hazards Program: cada sismo de magnitud 4.5 o mayor registrado en el mundo durante una ventana móvil configurable (1 h · 24 h · 7 días · 30 días), sin claves ni intermediarios."
+          sub="Conexión directa a las API abiertas del USGS Earthquake Hazards Program y del EMSC (European-Mediterranean Seismological Centre): cada sismo de magnitud 4.5 o mayor registrado en el mundo, sin claves ni intermediarios. Puedes elegir la fuente (USGS · EMSC · Ambas); en «Ambas» se combinan y deduplican."
         />
 
         {liveStatus === "error" ? (
@@ -902,14 +918,34 @@ export default function App() {
                     <span className="ping-slow absolute inline-flex h-full w-full rounded-full bg-teal opacity-75" />
                     <span className="relative inline-flex h-2 w-2 rounded-full bg-teal" />
                   </span>
-                  USGS · FEED ABIERTO
+                  {liveSource === "emsc" ? "EMSC · FEED ABIERTO" : liveSource === "both" ? "USGS + EMSC · COMBINADO" : "USGS · FEED ABIERTO"}
+                </span>
+                <span className="flex items-center gap-1 font-mono text-[10px] tracking-widest uppercase">
+                  {(["usgs", "emsc", "both"] as const).map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setLiveSource(s)}
+                      aria-pressed={liveSource === s}
+                      title={`Fuente en vivo: ${
+                        s === "usgs" ? "USGS (ventana móvil)" : s === "emsc" ? "EMSC (recientes)" : "Ambas fuentes combinadas"
+                      }`}
+                      className={`border px-2 py-1 ${
+                        liveSource === s
+                          ? "border-teal bg-teal/15 text-teal"
+                          : "border-line text-dim hover:border-teal/60 hover:text-teal"
+                      }`}
+                    >
+                      {s === "usgs" ? "USGS" : s === "emsc" ? "EMSC" : "AMBAS"}
+                    </button>
+                  ))}
                 </span>
                 <select
                   value={liveWindow}
                   onChange={(e) => setLiveWindow(e.target.value as LiveWindow)}
-                  title="Ventana del feed"
+                  disabled={liveSource === "emsc"}
+                  title={liveSource === "emsc" ? "La ventana solo aplica a USGS; EMSC muestra los recientes" : "Ventana del feed"}
                   aria-label="Ventana del feed"
-                  className="border border-teal/40 bg-deep px-2 py-1 font-mono text-[10px] tracking-widest text-teal uppercase outline-none hover:border-teal"
+                  className="border border-teal/40 bg-deep px-2 py-1 font-mono text-[10px] tracking-widest text-teal uppercase outline-none hover:border-teal disabled:cursor-not-allowed disabled:border-line disabled:text-dim"
                 >
                   {USGS_WINDOWS.map((w) => (
                     <option key={w.key} value={w.key}>
@@ -918,7 +954,7 @@ export default function App() {
                   ))}
                 </select>
                 <a
-                  href={feedUrl(liveWindow)}
+                  href={liveSource === "emsc" ? "https://www.seismicportal.eu/fdsnws/event/1/query?format=json&limit=50&minmagnitude=4.5" : feedUrl(liveWindow)}
                   target="_blank"
                   rel="noreferrer"
                   className="font-mono text-[10px] tracking-widest text-dim uppercase hover:text-teal"
@@ -959,7 +995,9 @@ export default function App() {
                     <div className="min-w-0 border border-line/70 bg-deep/50 px-4 py-3">
                       <div className="font-display text-3xl text-teal">{filteredLive.length}</div>
                       <div className="mt-1 font-mono text-[9px] tracking-[0.16em] break-words text-dim uppercase">
-                        Sismos M4.5+ en {USGS_WINDOWS.find((w) => w.key === liveWindow)?.days}
+                        {liveSource === "emsc"
+                          ? "Sismos M4.5+ recientes (EMSC)"
+                          : `Sismos M4.5+ en ${USGS_WINDOWS.find((w) => w.key === liveWindow)?.days}`}
                       </div>
                     </div>
                     <div className="min-w-0 border border-line/70 bg-deep/50 px-4 py-3">
@@ -982,7 +1020,7 @@ export default function App() {
                     </div>
                   </div>
                   <p className="mt-4 font-mono text-[10px] leading-relaxed tracking-wider text-dim uppercase">
-                    Actualización automática cada 5 min · los marcadores con retícula verde en el mapa
+                    Actualización automática cada 5 min · los marcadores con retícula en el mapa
                     pertenecen a esta capa · sin conexión se sirve el último feed en caché
                   </p>
                 </div>

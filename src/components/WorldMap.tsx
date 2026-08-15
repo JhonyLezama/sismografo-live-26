@@ -8,6 +8,7 @@ import type { Quake } from "../data/quakes";
 import { magColor, dateShort, fmt, fmtMoney, depthClass, mmiColor } from "../data/quakes";
 import type { LiveQuake } from "../data/usgs";
 import { timeAgo } from "../data/usgs";
+import type { LiveSource } from "../data/emsc";
 import type { GdacsAlert } from "../data/gdacs";
 import { gdacsColor } from "../data/gdacs";
 import { PLATES } from "../data/plates";
@@ -209,6 +210,7 @@ interface Props {
   onSelect: (id: string | null) => void;
   liveQuakes: LiveQuake[];
   mode: MapMode;
+  liveSource?: LiveSource;
   liveSelectedId: string | null;
   onSelectLive: (id: string | null) => void;
   gdacs?: GdacsAlert[];
@@ -245,7 +247,7 @@ function SelectionSummary({
     <>
       <div className="flex items-center justify-between gap-2 border-b border-line/70 px-3 py-1.5">
         <span className="font-mono text-[9px] tracking-[0.2em] text-dim uppercase">
-          {selPlate ? "Límite de placa" : selLive ? "Registro en vivo · USGS" : "Ficha del evento"}
+          {selPlate ? "Límite de placa" : selLive ? (selLive.id.startsWith("emsc-") ? "Registro en vivo · EMSC" : "Registro en vivo · USGS") : "Ficha del evento"}
         </span>
         <button
           onClick={onClose}
@@ -366,6 +368,7 @@ export default memo(function WorldMap({
   onSelect,
   liveQuakes,
   mode,
+  liveSource = "usgs",
   liveSelectedId,
   onSelectLive,
   gdacs = [],
@@ -970,10 +973,12 @@ export default memo(function WorldMap({
             );
           })}
 
-          {/* capa EN VIVO (USGS) */}
+          {/* capa EN VIVO (USGS / EMSC) */}
           {showLiveLayer &&
             livePoints.map(({ q, x, y }) => {
               const c = magColor(q.mag);
+              const emsc = q.id.startsWith("emsc-");
+              const ring = emsc ? "#a78bfa" : "#3ec9a7";
               const r = Math.max(2.2, rFor(q.mag) * 0.8) / Math.pow(view.k, 0.72);
               const sel = q.id === liveSelectedId;
               return (
@@ -994,7 +999,7 @@ export default memo(function WorldMap({
                     <circle
                       r={r * 2.1}
                       fill="none"
-                      stroke="#3ec9a7"
+                      stroke={ring}
                       strokeWidth={1.2}
                       strokeDasharray="4 5"
                       className="spin-slow"
@@ -1004,7 +1009,7 @@ export default memo(function WorldMap({
                   <circle
                     r={r * 1.7}
                     fill="none"
-                    stroke="#3ec9a7"
+                    stroke={ring}
                     strokeWidth={0.9}
                     strokeDasharray="2.5 3.5"
                     opacity={0.8}
@@ -1013,7 +1018,7 @@ export default memo(function WorldMap({
                   <circle r={r} fill={c} fillOpacity={0.16} stroke={c} strokeWidth={sel ? 2 : 1.2} vectorEffect="non-scaling-stroke" />
                   <path
                     d={`M${-r - 3} 0H${-r - 0.5}M${r + 0.5} 0H${r + 3}M0 ${-r - 3}V${-r - 0.5}M0 ${r + 0.5}V${r + 3}`}
-                    stroke={c}
+                    stroke={ring}
                     strokeWidth={1}
                     vectorEffect="non-scaling-stroke"
                   />
@@ -1325,6 +1330,14 @@ export default memo(function WorldMap({
           <span className="flex items-center gap-1.5 border-l border-line pl-3">
             <span className="inline-block h-2 w-2 rotate-45 border" style={{ borderColor: "#e23a62", background: "#e23a6233" }} />
             <span className="font-mono text-[10px] text-fog">GDACS · alerta</span>
+          </span>
+        )}
+        {liveSource !== "usgs" && (
+          <span className="flex items-center gap-1.5 border-l border-line pl-3">
+            <span className="inline-block rounded-full border" style={{ borderColor: "#a78bfa", background: "#a78bfa33", width: 9, height: 9 }} />
+            <span className="font-mono text-[10px] text-fog">
+              {liveSource === "both" ? "EMSC (solo EMSC)" : "EMSC"}
+            </span>
           </span>
         )}
       </div>
