@@ -1,6 +1,93 @@
 import type { Quake } from "../data/quakes";
 import { magColor, mmiColor, depthClass, fmt, fmtMoney, dateShort } from "../data/quakes";
+import type { LiveQuake } from "../data/usgs";
+import { timeAgo, fmtUtc } from "../data/usgs";
 import Seismograph from "./Seismograph";
+
+/* ---- ficha de evento EN VIVO (USGS) ---- */
+export function LiveDetail({ q, onClose }: { q: LiveQuake; onClose: () => void }) {
+  const c = magColor(q.mag);
+  const bars = 10 + Math.round((q.mag - 4) * 12);
+  return (
+    <div className="border border-teal/40 bg-panel">
+      <div className="flex items-start justify-between gap-3 border-b border-teal/30 bg-deep/60 p-4 sm:p-5">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="ping-slow absolute inline-flex h-full w-full rounded-full bg-teal opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-teal" />
+            </span>
+            <span className="font-mono text-[10px] font-semibold tracking-[0.22em] text-teal uppercase">
+              Registro en vivo · USGS
+            </span>
+          </div>
+          <h3 className="mt-2 font-display text-2xl leading-tight tracking-wide text-bone">{q.country}</h3>
+          <p className="mt-1 text-sm leading-relaxed text-fog">{q.place}</p>
+        </div>
+        <button
+          onClick={onClose}
+          aria-label="Cerrar ficha"
+          className="chip-btn border border-line p-1.5 text-dim hover:border-verm hover:text-verm"
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+            <path d="M2 2l10 10M12 2L2 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div className="p-4 sm:p-5">
+        <div className="flex items-center gap-3">
+          <span className="font-display text-5xl leading-none" style={{ color: c }}>
+            M{q.mag.toFixed(1)}
+          </span>
+          <span className="font-mono text-[10px] tracking-[0.18em] text-dim uppercase">
+            Magnitud
+            <br />
+            momento (Mw)
+          </span>
+        </div>
+        <div className="mt-3 flex gap-[3px]">
+          {Array.from({ length: Math.min(84, bars) }).map((_, i) => (
+            <span key={i} className="wave-bar h-3 w-[3px]" style={{ background: c, animationDelay: `${i * 50}ms` }} />
+          ))}
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          {[
+            { k: "Coordenadas", v: `${Math.abs(q.lat).toFixed(2)}°${q.lat >= 0 ? "N" : "S"} · ${Math.abs(q.lon).toFixed(2)}°${q.lon >= 0 ? "E" : "O"}` },
+            { k: "Profundidad", v: `${q.depth} km` },
+            { k: "Hora (UTC)", v: fmtUtc(q.time) },
+            { k: "Antigüedad", v: timeAgo(q.time) },
+            { k: "Índice de impacto", v: `${q.sig} / 1000` },
+            { k: "Alerta tsunami", v: q.tsunami ? "SÍ EMITIDA" : "No" },
+          ].map((row) => (
+            <div key={row.k} className="border border-line/70 bg-deep/50 px-3 py-2">
+              <div className="font-mono text-[9px] tracking-[0.16em] text-dim uppercase">{row.k}</div>
+              <div className={`mt-0.5 font-mono text-xs ${row.k === "Alerta tsunami" && q.tsunami ? "font-semibold text-verm" : "text-bone"}`}>
+                {row.v}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <a
+          href={q.url}
+          target="_blank"
+          rel="noreferrer"
+          className="group mt-4 flex items-center justify-between border border-teal/50 bg-teal/10 px-4 py-3 text-sm font-semibold text-teal transition-colors hover:bg-teal/20"
+        >
+          Ver ficha oficial en USGS
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
+            <path d="M3 11L11 3M5 3h6v6" />
+          </svg>
+        </a>
+        <p className="mt-3 font-mono text-[10px] leading-relaxed tracking-wider text-dim uppercase">
+          Fuente: USGS Earthquake Hazards Program
+        </p>
+      </div>
+    </div>
+  );
+}
 
 interface Props {
   quakes: Quake[];

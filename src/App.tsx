@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Region, Quake } from "./data/quakes";
-import { QUAKES, ANNUAL, fmt, MONTHS_ES } from "./data/quakes";
+import { QUAKES, ANNUAL, fmt, MONTHS_ES, magColor } from "./data/quakes";
 import WorldMap from "./components/WorldMap";
-import SidePanel from "./components/SidePanel";
+import SidePanel, { LiveDetail } from "./components/SidePanel";
+import { fetchLiveQuakes, timeAgo, USGS_FEED_URL } from "./data/usgs";
+import type { LiveQuake } from "./data/usgs";
 import Registry from "./components/Registry";
 import MagnitudeLab from "./components/MagnitudeLab";
 import Balance from "./components/Balance";
@@ -38,6 +40,31 @@ export default function App() {
   const [region, setRegion] = useState<(typeof REGIONS)[number]>("Todas");
   const [month, setMonth] = useState(-1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  /* capa EN VIVO — API gratuita del USGS */
+  const [liveQuakes, setLiveQuakes] = useState<LiveQuake[]>([]);
+  const [liveUpdated, setLiveUpdated] = useState<number | null>(null);
+  const [liveStatus, setLiveStatus] = useState<"loading" | "ok" | "error">("loading");
+  const [showLive, setShowLive] = useState(true);
+  const [liveSel, setLiveSel] = useState<string | null>(null);
+
+  const refreshLive = () => {
+    setLiveStatus("loading");
+    fetchLiveQuakes()
+      .then(({ quakes, updated }) => {
+        setLiveQuakes(quakes);
+        setLiveUpdated(updated);
+        setLiveStatus("ok");
+      })
+      .catch(() => setLiveStatus("error"));
+  };
+
+  useEffect(() => {
+    refreshLive();
+    const id = window.setInterval(refreshLive, 5 * 60 * 1000);
+    return () => window.clearInterval(id);
+  }, []);
+
   const clock = useUtcClock();
   const reduced = usePrefersReducedMotion();
   const mapSecRef = useRef<HTMLDivElement | null>(null);
@@ -91,7 +118,7 @@ export default function App() {
             </span>
           </a>
           <nav className="hidden items-center gap-5 font-mono text-[11px] tracking-[0.16em] text-fog uppercase md:flex">
-            {[["#mapa", "Mapa"], ["#registro", "Registro"], ["#escalas", "Escalas"], ["#balance", "Balance"]].map(([h, l]) => (
+            {[["#mapa", "Mapa"], ["#en-vivo", "En vivo"], ["#registro", "Registro"], ["#escalas", "Escalas"], ["#balance", "Balance"]].map(([h, l]) => (
               <a key={h} href={h} className="chip-btn border-b border-transparent pb-0.5 hover:border-amber hover:text-amber">
                 {l}
               </a>
@@ -219,16 +246,224 @@ export default function App() {
           <span className="ml-auto border border-line bg-panel px-3 py-1.5 font-mono text-[11px] tracking-widest text-jade">
             {filtered.length} EVENTOS
           </span>
+          <button
+            onClick={() => setShowLive((v) => !v)}
+            aria-pressed={showLive}
+            title="Mostrar u ocultar la capa de sismos en vivo del USGS"
+            className={`flex items-center gap-2 border px-3 py-1.5 font-mono text-[11px] tracking-widest uppercase transition-colors ${
+              showLive
+                ? "border-teal/60 bg-teal/10 text-teal"
+                : "border-line bg-panel text-dim hover:text-fog"
+            }`}
+          >
+            <span className={`inline-block h-2 w-2 rounded-full ${showLive ? "blink-dot bg-teal" : "bg-dim"}`} />
+            EN VIVO USGS · {liveStatus === "loading" ? "···" : liveQuakes.length}
+          </button>
+          <button
+            onClick={refreshLive}
+            aria-label="Actualizar datos del USGS"
+            title="Actualizar datos del USGS"
+            className="chip-btn grid h-[30px] w-[30px] place-items-center border border-line bg-panel text-fog hover:border-teal hover:text-teal"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              className={liveStatus === "loading" ? "animate-spin" : ""}
+            >
+              <path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.5v3h-3" />
+            </svg>
+          </button>
         </div>
 
         <div className="grid gap-4 lg:h-[620px] lg:grid-cols-12">
           <div className="h-[420px] sm:h-[500px] lg:col-span-7 lg:h-full">
-            <WorldMap quakes={filtered} selectedId={selectedId} onSelect={setSelectedId} />
+            <WorldMap
+              quakes={filtered}
+              selectedId={selectedId}
+              onSelect={(id) => {
+                setSelectedId(id);
+                if (id) setLiveSel(null);
+              }}
+              liveQuakes={liveQuakes}
+              showLive={showLive && liveStatus === "ok"}
+              liveSelectedId={liveSel}
+              onSelectLive={(id) => {
+                setLiveSel(id);
+                if (id) setSelectedId(null);
+              }}
+            />
           </div>
-          <div className="h-[480px] min-h-0 lg:col-span-5 lg:h-full">
-            <SidePanel quakes={filtered} selectedId={selectedId} onSelect={setSelectedId} />
+          <div className="h-[480px] min-h-0 overflow-y-auto lg:col-span-5 lg:h-full">
+            {liveSel && liveQuakes.some((q) => q.id === liveSel) ? (
+              <LiveDetail
+                q={liveQuakes.find((q) => q.id === liveSel)!}
+                onClose={() => setLiveSel(null)}
+              />
+            ) : (
+              <SidePanel quakes={filtered} selectedId={selectedId} onSelect={setSelectedId} />
+            )}
           </div>
         </div>
+      </section>
+
+      {/* ---------- 01b en vivo ---------- */}
+      <section id="en-vivo" className="relative z-10 mx-auto max-w-[1400px] scroll-mt-24 px-4 py-12 sm:px-6">
+        <SectionHead
+          num="01·B · Alimentación en vivo"
+          title="PULSO EN TIEMPO REAL"
+          sub="Conexión directa a la API abierta del USGS Earthquake Hazards Program: cada sismo de magnitud 4.5 o mayor registrado en el mundo durante la última ventana móvil de 30 días, sin claves ni intermediarios."
+        />
+
+        {liveStatus === "error" ? (
+          <div className="border border-verm/50 bg-verm/10 p-8 text-center">
+            <div className="font-display text-2xl tracking-wide text-verm">SEÑAL INTERRUMPIDA</div>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-fog">
+              No fue posible conectar con el feed del USGS (¿sin red o servicio ocupado?). El resto del
+              observatorio funciona con datos locales.
+            </p>
+            <button
+              onClick={refreshLive}
+              className="chip-btn mt-5 border border-verm/60 bg-verm/15 px-5 py-2 font-mono text-xs tracking-[0.18em] text-verm uppercase hover:bg-verm/25"
+            >
+              ↻ Reintentar conexión
+            </button>
+          </div>
+        ) : (
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
+            {/* estado del feed */}
+            <div className="border border-teal/40 bg-panel">
+              <div className="flex items-center justify-between border-b border-teal/30 bg-deep/60 px-5 py-3">
+                <span className="flex items-center gap-2 font-mono text-[10px] tracking-[0.22em] text-teal uppercase">
+                  <span className="relative flex h-2 w-2">
+                    <span className="ping-slow absolute inline-flex h-full w-full rounded-full bg-teal opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-teal" />
+                  </span>
+                  USGS · FEED ABIERTO
+                </span>
+                <a
+                  href={USGS_FEED_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-mono text-[10px] tracking-widest text-dim uppercase hover:text-teal"
+                >
+                  GeoJSON ↗
+                </a>
+              </div>
+              {liveStatus === "loading" ? (
+                <div className="space-y-3 p-5">
+                  {[0, 1, 2, 3].map((i) => (
+                    <div key={i} className="pulse-soft h-4 border border-line bg-deep" style={{ animationDelay: `${i * 150}ms` }} />
+                  ))}
+                  <div className="pt-2 text-center font-mono text-[10px] tracking-[0.2em] text-dim uppercase">
+                    Sintonizando estaciones sísmicas…
+                  </div>
+                </div>
+              ) : (
+                <div className="p-5">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="border border-line/70 bg-deep/50 px-4 py-3">
+                      <div className="font-display text-3xl text-teal">{liveQuakes.length}</div>
+                      <div className="mt-1 font-mono text-[9px] tracking-[0.16em] text-dim uppercase">Sismos M4.5+ en 30 días</div>
+                    </div>
+                    <div className="border border-line/70 bg-deep/50 px-4 py-3">
+                      <div className="font-display text-3xl" style={{ color: magColor(liveQuakes.reduce((m, q) => Math.max(m, q.mag), 0)) }}>
+                        M{liveQuakes.reduce((m, q) => Math.max(m, q.mag), 0).toFixed(1)}
+                      </div>
+                      <div className="mt-1 font-mono text-[9px] tracking-[0.16em] text-dim uppercase">Máxima en la ventana</div>
+                    </div>
+                    <div className="border border-line/70 bg-deep/50 px-4 py-3">
+                      <div className="font-mono text-sm font-semibold text-bone">
+                        {liveQuakes[0] ? timeAgo(liveQuakes[0].time) : "—"}
+                      </div>
+                      <div className="mt-1 font-mono text-[9px] tracking-[0.16em] text-dim uppercase">Último evento</div>
+                    </div>
+                    <div className="border border-line/70 bg-deep/50 px-4 py-3">
+                      <div className="font-mono text-sm font-semibold text-bone">
+                        {liveUpdated ? timeAgo(liveUpdated).replace("hace instantes", "ahora") : "—"}
+                      </div>
+                      <div className="mt-1 font-mono text-[9px] tracking-[0.16em] text-dim uppercase">Última sincronización</div>
+                    </div>
+                  </div>
+                  <p className="mt-4 font-mono text-[10px] leading-relaxed tracking-wider text-dim uppercase">
+                    Actualización automática cada 5 min · los marcadores con retícula verde en el mapa
+                    pertenecen a esta capa
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* últimos eventos */}
+            <div className="border border-line bg-panel">
+              <div className="flex items-center justify-between border-b border-line bg-deep/60 px-5 py-3">
+                <span className="font-mono text-[10px] tracking-[0.22em] text-dim uppercase">
+                  Últimos eventos · clic para ubicar en el mapa
+                </span>
+                <span className="font-mono text-[10px] tracking-widest text-teal">
+                  {liveStatus === "ok" ? `MOSTRANDO ${Math.min(12, liveQuakes.length)} DE ${liveQuakes.length}` : ""}
+                </span>
+              </div>
+              {liveStatus === "loading" ? (
+                <div className="space-y-2 p-5">
+                  {[0, 1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="pulse-soft h-9 border border-line bg-deep" style={{ animationDelay: `${i * 120}ms` }} />
+                  ))}
+                </div>
+              ) : (
+                <ul className="divide-y divide-line/60">
+                  {liveQuakes.slice(0, 12).map((q) => (
+                    <li key={q.id}>
+                      <button
+                        onClick={() => {
+                          setLiveSel(q.id);
+                          setSelectedId(null);
+                          mapSecRef.current?.scrollIntoView({
+                            behavior: reduced ? "auto" : "smooth",
+                            block: "start",
+                          });
+                        }}
+                        className="row-hover group flex w-full items-center gap-4 px-5 py-2.5 text-left"
+                      >
+                        <span className="w-16 shrink-0 font-mono text-[11px] tracking-wider text-dim">
+                          {timeAgo(q.time).replace("hace ", "")}
+                        </span>
+                        <span
+                          className="grid h-9 w-12 shrink-0 place-items-center border font-display text-lg"
+                          style={{ color: magColor(q.mag), borderColor: `${magColor(q.mag)}55`, background: `${magColor(q.mag)}12` }}
+                        >
+                          {q.mag.toFixed(1)}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-semibold text-bone">{q.place}</span>
+                          <span className="block font-mono text-[10px] tracking-wider text-dim">
+                            {q.depth} km prof. · sig {q.sig}
+                            {q.tsunami && <span className="text-verm"> · ⚠ tsunami</span>}
+                          </span>
+                        </span>
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 14 14"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                          className="shrink-0 text-dim transition-all group-hover:translate-x-1 group-hover:text-teal"
+                        >
+                          <path d="M2 7h9M8 3.5L11.5 7 8 10.5" />
+                        </svg>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
       </section>
 
       {/* ---------- 02 registro ---------- */}

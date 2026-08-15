@@ -5,6 +5,8 @@ import land110 from "world-atlas/land-110m.json";
 import countries110 from "world-atlas/countries-110m.json";
 import type { Quake } from "../data/quakes";
 import { magColor, dateShort, fmt } from "../data/quakes";
+import type { LiveQuake } from "../data/usgs";
+import { timeAgo } from "../data/usgs";
 import { usePrefersReducedMotion } from "../hooks";
 
 const W = 980;
@@ -53,6 +55,10 @@ interface Props {
   quakes: Quake[];
   selectedId: string | null;
   onSelect: (id: string | null) => void;
+  liveQuakes: LiveQuake[];
+  showLive: boolean;
+  liveSelectedId: string | null;
+  onSelectLive: (id: string | null) => void;
 }
 
 const clampView = (k: number, tx: number, ty: number): View => ({
@@ -61,11 +67,20 @@ const clampView = (k: number, tx: number, ty: number): View => ({
   ty: Math.min(0, Math.max(H - H * k, ty)),
 });
 
-export default function WorldMap({ quakes, selectedId, onSelect }: Props) {
+export default function WorldMap({
+  quakes,
+  selectedId,
+  onSelect,
+  liveQuakes,
+  showLive,
+  liveSelectedId,
+  onSelectLive,
+}: Props) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [view, setView] = useState<View>({ k: 1, tx: 0, ty: 0 });
   const [smooth, setSmooth] = useState(false);
   const [hoverId, setHoverId] = useState<string | null>(null);
+  const [hoverLiveId, setHoverLiveId] = useState<string | null>(null);
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
   const movedRef = useRef(false);
   const dragRef = useRef<{ px: number; py: number; tx: number; ty: number } | null>(null);
@@ -78,6 +93,15 @@ export default function WorldMap({ quakes, selectedId, onSelect }: Props) {
         return { q, x, y };
       }),
     [quakes]
+  );
+
+  const livePoints = useMemo(
+    () =>
+      liveQuakes.map((q) => {
+        const [x, y] = projection([q.lon, q.lat]) ?? [0, 0];
+        return { q, x, y };
+      }),
+    [liveQuakes]
   );
 
   /* zoom con rueda (listener no pasivo) */
@@ -102,16 +126,19 @@ export default function WorldMap({ quakes, selectedId, onSelect }: Props) {
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
-  /* centrar al seleccionar */
+  /* centrar al seleccionar (curado o en vivo) */
   useEffect(() => {
-    if (!selectedId) return;
-    const p = points.find((pt) => pt.q.id === selectedId);
+    const p = selectedId
+      ? points.find((pt) => pt.q.id === selectedId)
+      : liveSelectedId
+        ? livePoints.find((pt) => pt.q.id === liveSelectedId)
+        : undefined;
     if (!p) return;
     const k2 = Math.max(view.k, 2.4);
     setSmooth(true);
     setView(clampView(k2, W / 2 - p.x * k2, H / 2 - p.y * k2));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId, points]);
+  }, [selectedId, liveSelectedId, points, livePoints]);
 
   /* mapeo cliente → viewBox con preserveAspectRatio="meet" */
   const metrics = () => {
@@ -245,6 +272,55 @@ export default function WorldMap({ quakes, selectedId, onSelect }: Props) {
               </g>
             );
           })}
+
+          {/* capa EN VIVO (USGS) */}
+          {showLive &&
+            livePoints.map(({ q, x, y }) => {
+              const c = magColor(q.mag);
+              const r = Math.max(2.2, rFor(q.mag) * 0.8) / Math.pow(view.k, 0.72);
+              const sel = q.id === liveSelectedId;
+              return (
+                <g
+                  key={q.id}
+                  transform={`translate(${x}, ${y})`}
+                  className="marker-dot"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!movedRef.current) onSelectLive(q.id);
+                  }}
+                  onMouseEnter={() => setHoverLiveId(q.id)}
+                  onMouseLeave={() => setHoverLiveId(null)}
+                >
+                  {sel && (
+                    <circle
+                      r={r * 2.1}
+                      fill="none"
+                      stroke="#3ec9a7"
+                      strokeWidth={1.2}
+                      strokeDasharray="4 5"
+                      className="spin-slow"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  )}
+                  <circle
+                    r={r * 1.7}
+                    fill="none"
+                    stroke="#3ec9a7"
+                    strokeWidth={0.9}
+                    strokeDasharray="2.5 3.5"
+                    opacity={0.8}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                  <circle r={r} fill={c} fillOpacity={0.16} stroke={c} strokeWidth={sel ? 2 : 1.2} vectorEffect="non-scaling-stroke" />
+                  <path
+                    d={`M${-r - 3} 0H${-r - 0.5}M${r + 0.5} 0H${r + 3}M0 ${-r - 3}V${-r - 0.5}M0 ${r + 0.5}V${r + 3}`}
+                    stroke={c}
+                    strokeWidth={1}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                </g>
+              );
+            })}
         </g>
 
         {/* crosshair que sigue al cursor */}
@@ -279,6 +355,34 @@ export default function WorldMap({ quakes, selectedId, onSelect }: Props) {
             )}
           </div>
         </div>
+        );
+      })()}
+
+      {/* tooltip en vivo */}
+      {showLive && hoverLiveId && hoverLiveId !== liveSelectedId && (() => {
+        const lp = livePoints.find((p) => p.q.id === hoverLiveId);
+        if (!lp) return null;
+        const { s, ox, oy } = metrics();
+        const left = ox + (lp.x * view.k + view.tx) * s;
+        const top = oy + (lp.y * view.k + view.ty) * s;
+        return (
+          <div
+            className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-[130%] whitespace-nowrap border border-teal/50 bg-abyss/95 px-3 py-2 font-mono text-[11px] leading-relaxed shadow-xl shadow-black/40"
+            style={{ left, top, width: "auto" }}
+          >
+            <div className="flex items-center gap-2">
+              <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-teal" />
+              <span className="text-[9px] tracking-[0.2em] text-teal">EN VIVO</span>
+              <span className="font-display text-sm tracking-wide" style={{ color: magColor(lp.q.mag) }}>
+                M{lp.q.mag.toFixed(1)}
+              </span>
+            </div>
+            <div className="mt-0.5 max-w-[260px] truncate text-bone">{lp.q.place}</div>
+            <div className="text-dim">
+              {timeAgo(lp.q.time)} · {lp.q.depth} km prof.
+              {lp.q.tsunami && <span className="text-verm"> · tsunami</span>}
+            </div>
+          </div>
         );
       })()}
 
