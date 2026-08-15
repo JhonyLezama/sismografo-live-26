@@ -1,5 +1,10 @@
-import { ANNUAL, MONTHLY, QUAKES, fmt, fmtMoney, magColor } from "../data/quakes";
+import { ANNUAL, MONTHLY, QUAKES, fmt, fmtMoney, magColor, CATALOG_FIRST, CATALOG_LAST } from "../data/quakes";
 import { useCountUp, useReveal } from "../hooks";
+
+const MESES_FULL = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];
 
 function Counter({ value, label, suffix, prefix }: { value: number; label: string; suffix?: string; prefix?: string }) {
   const { ref, val } = useCountUp(value);
@@ -31,8 +36,13 @@ export default function Balance() {
   const costs = QUAKES.filter((q) => q.costM !== null)
     .sort((a, b) => (b.costM ?? 0) - (a.costM ?? 0));
   const maxCost = costs[0]?.costM ?? 1;
-  const maxEvents = Math.max(...MONTHLY.map((m) => m.events));
-  const maxDeaths = Math.max(...MONTHLY.map((m) => m.deaths));
+  const lastMonthIdx = QUAKES.reduce((mx, q) => Math.max(mx, Number(q.date.slice(5, 7))), 0);
+  const visibleMonths = MONTHLY.slice(0, lastMonthIdx);
+  const maxEvents = Math.max(...visibleMonths.map((m) => m.events));
+  const maxDeaths = Math.max(...visibleMonths.map((m) => m.deaths));
+  const deathsMaxIdx = visibleMonths.reduce((best, m, i) => (m.deaths > visibleMonths[best].deaths ? i : best), 0);
+  const deathsYear = ANNUAL.deaths;
+  const deathsShare = deathsYear > 0 ? Math.round((visibleMonths[deathsMaxIdx].deaths / deathsYear) * 100) : 0;
   const countries = new Set(QUAKES.map((q) => q.iso)).size;
 
   return (
@@ -52,10 +62,12 @@ export default function Balance() {
         <div className="border border-line bg-panel p-5 sm:p-6">
           <div className="flex items-baseline justify-between">
             <h3 className="font-display text-xl tracking-wide text-bone">SISMOS M6+ POR MES</h3>
-            <span className="font-mono text-[10px] tracking-[0.16em] text-dim uppercase">ene — ago</span>
+            <span className="font-mono text-[10px] tracking-[0.16em] text-dim uppercase">
+              {CATALOG_FIRST.toUpperCase()} — {CATALOG_LAST.toUpperCase()}
+            </span>
           </div>
           <div className="mt-5 flex h-44 items-end gap-2 sm:gap-3">
-            {MONTHLY.map((mo, i) => (
+            {visibleMonths.map((mo, i) => (
               <div key={mo.m} className="group flex h-full flex-1 flex-col items-center justify-end gap-1.5">
                 <span className="font-mono text-[11px] text-fog transition-colors group-hover:text-amber">{mo.events}</span>
                 <div
@@ -71,10 +83,12 @@ export default function Balance() {
         <div className="border border-line bg-panel p-5 sm:p-6">
           <div className="flex items-baseline justify-between">
             <h3 className="font-display text-xl tracking-wide text-bone">VÍCTIMAS FATALES POR MES</h3>
-            <span className="font-mono text-[10px] tracking-[0.16em] text-dim uppercase">junio = 93 %</span>
+            <span className="font-mono text-[10px] tracking-[0.16em] text-dim uppercase">
+              {MESES_FULL[deathsMaxIdx]} = {deathsShare} %
+            </span>
           </div>
           <div className="mt-5 flex h-44 items-end gap-2 sm:gap-3">
-            {MONTHLY.map((mo, i) => (
+            {visibleMonths.map((mo, i) => (
               <div key={mo.m} className="group flex h-full flex-1 flex-col items-center justify-end gap-1.5">
                 <span className="font-mono text-[10px] text-fog transition-colors group-hover:text-verm">
                   {mo.deaths > 0 ? fmt(mo.deaths) : "0"}

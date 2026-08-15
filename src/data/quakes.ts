@@ -94,27 +94,32 @@ export const energyJoules = (m: number) => Math.pow(10, 1.5 * m + 4.8);
 export const TNTtons = (m: number) => energyJoules(m) / 4.184e9;
 export const HIROSHIMA_J = 6.3e13;
 
-/* resumen anual (fuente: recuento global tipo USGS/EMSC) */
-export const ANNUAL = {
-  totalM4: 8462,
-  m7: 11,
-  m6: 78,
-  m5: 971,
-  deaths: 6747,
-  costMEst: 6130,
-  period: "1 ENE — 15 AGO 2026",
-};
+/* resumen mensual y anual derivado del catálogo (fuente única: quakes.json) */
+const _monthTotals = (() => {
+  const by = new Map<number, { events: number; deaths: number }>();
+  for (const q of QUAKES) {
+    const mo = Number(q.date.slice(5, 7));
+    const cur = by.get(mo) ?? { events: 0, deaths: 0 };
+    if (q.mag >= 6) cur.events += 1;
+    cur.deaths += q.deaths || 0;
+    by.set(mo, cur);
+  }
+  return by;
+})();
 
-export const MONTHLY = [
-  { m: "Ene", events: 10, deaths: 4 },
-  { m: "Feb", events: 8, deaths: 1 },
-  { m: "Mar", events: 4, deaths: 0 },
-  { m: "Abr", events: 3, deaths: 13 },
-  { m: "May", events: 2, deaths: 3 },
-  { m: "Jun", events: 5, deaths: 6306 },
-  { m: "Jul", events: 4, deaths: 45 },
-  { m: "Ago", events: 5, deaths: 269 },
-];
+export const MONTHLY = MONTHS_ES.map((m, i) => {
+  const t = _monthTotals.get(i + 1) ?? { events: 0, deaths: 0 };
+  return { m, events: t.events, deaths: t.deaths };
+});
+
+export const ANNUAL = {
+  totalM4: 8462, // total global M4+ 2026 (referencia USGS, no derivable del catálogo)
+  m7: QUAKES.filter((q) => q.mag >= 7).length,
+  m6: QUAKES.filter((q) => q.mag >= 6 && q.mag < 7).length,
+  deaths: QUAKES.reduce((s, q) => s + (q.deaths || 0), 0),
+  costMEst: Math.round(QUAKES.reduce((s, q) => s + (q.costM || 0), 0)),
+  period: `${CATALOG_FIRST.toUpperCase()} — ${CATALOG_LAST.toUpperCase()} 2026`,
+};
 
 export const MERCALLI: { g: string; label: string; desc: string }[] = [
   { g: "I", label: "Instrumental", desc: "Solo lo registran los sismógrafos." },
