@@ -1132,6 +1132,17 @@ export default function App() {
         <div className="border-t border-line">
           <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-2 px-4 py-4 font-mono text-[10px] tracking-[0.2em] text-dim uppercase sm:px-6">
             <span>© 2026 · Sismógrafo — observatorio sísmico</span>
+            <span>
+              Desarrollado por{" "}
+              <a
+                href="https://sysjol.onrender.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-teal transition-colors hover:text-amber"
+              >
+                SysJoL
+              </a>
+            </span>
             <span>React · d3-geo · datos abiertos</span>
           </div>
         </div>

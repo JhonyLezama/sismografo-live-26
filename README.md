@@ -8,6 +8,8 @@ Observatorio sísmico interactivo con el catálogo de terremotos de 2026 y la al
 
 **PWA instalable · funciona sin conexión**
 
+👨‍💻 **Desarrollado por [SysJoL](https://sysjol.onrender.com/)**
+
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=white)](https://react.dev)
 [![Vite](https://img.shields.io/badge/Vite-6-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vite.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
