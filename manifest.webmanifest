@@ -1,0 +1,32 @@
+{
+  "name": "Sismógrafo 2026 · Observatorio de Terremotos",
+  "short_name": "Sismógrafo·26",
+  "description": "Observatorio sísmico 2026: mapa mundial de epicentros, magnitudes, intensidad Mercalli, víctimas y costo estimado, con el feed en vivo del USGS.",
+  "lang": "es",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0B1214",
+  "theme_color": "#0B1214",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
