@@ -64,10 +64,10 @@ export default function MobileNav({ open, onClose, items }: Props) {
           >
             <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
               <a href="#" onClick={onClose} className="flex items-center gap-2.5">
-                <span className="grid h-8 w-8 place-items-center border border-amber/60 bg-panel">
+                <span className="grid h-9 w-9 place-items-center border border-amber/60 bg-panel">
                   <svg
-                    width="18"
-                    height="18"
+                    width="20"
+                    height="20"
                     viewBox="0 0 20 20"
                     fill="none"
                     stroke="#f59e42"
