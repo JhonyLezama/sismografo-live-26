@@ -11,6 +11,7 @@ import { timeAgo } from "../data/usgs";
 import { PLATES } from "../data/plates";
 import { saveBlob } from "../data/export";
 import { useMediaQuery, usePrefersReducedMotion } from "../hooks";
+import { emitInstallSignal } from "../installSignals";
 
 const W = 980;
 const H = 500;
@@ -698,6 +699,7 @@ export default memo(function WorldMap({
   const downloadMap = (format: "png" | "svg") => {
     const svg = svgRef.current;
     if (!svg) return;
+    emitInstallSignal("export");
     const clone = svg.cloneNode(true) as SVGSVGElement;
     clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
     clone.setAttribute("width", String(W));

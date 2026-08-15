@@ -138,6 +138,19 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const INSTALL_STORAGE_KEY = "sismografo-install-dismissed";
+const INSTALL_SHOWN_KEY = "sismografo-install-shown";
+const INSTALL_VISITS_KEY = "sismografo-install-visits";
+const INSTALL_VISIT_SESSION_KEY = "sismografo-install-visit-session";
+const MAX_SHOWS = 3;
+
+const readInt = (key: string, fallback: number): number => {
+  try {
+    const n = Number(window.localStorage.getItem(key));
+    return Number.isFinite(n) && n >= 0 ? n : fallback;
+  } catch {
+    return fallback;
+  }
+};
 
 export function useInstallPrompt() {
   const [installEvt, setInstallEvt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -149,6 +162,8 @@ export function useInstallPrompt() {
       return false;
     }
   });
+  const [showCount, setShowCount] = useState(() => readInt(INSTALL_SHOWN_KEY, 0));
+  const [visitCount, setVisitCount] = useState(1);
 
   const isIos = useMemo(() => {
     const ua = window.navigator.userAgent;
@@ -177,6 +192,22 @@ export function useInstallPrompt() {
     };
   }, []);
 
+  /* contador de visitas: una por carga de página (guard por sesión) */
+  useEffect(() => {
+    try {
+      if (!window.sessionStorage.getItem(INSTALL_VISIT_SESSION_KEY)) {
+        window.sessionStorage.setItem(INSTALL_VISIT_SESSION_KEY, "1");
+        const n = readInt(INSTALL_VISITS_KEY, 0) + 1;
+        window.localStorage.setItem(INSTALL_VISITS_KEY, String(n));
+        setVisitCount(n);
+      } else {
+        setVisitCount(readInt(INSTALL_VISITS_KEY, 0) || 1);
+      }
+    } catch {
+      setVisitCount(1);
+    }
+  }, []);
+
   const install = useCallback(async () => {
     if (!installEvt) return;
     await installEvt.prompt();
@@ -195,11 +226,28 @@ export function useInstallPrompt() {
     }
   }, []);
 
+  const markShown = useCallback(() => {
+    setShowCount((c) => {
+      const n = c + 1;
+      try {
+        window.localStorage.setItem(INSTALL_SHOWN_KEY, String(n));
+      } catch {
+        /* almacenamiento bloqueado: se ignora */
+      }
+      return n;
+    });
+  }, []);
+
+  const overCap = showCount >= MAX_SHOWS;
+  const eligible = !standalone && !installed && !dismissed && !overCap;
+
   return {
-    canPrompt: !!installEvt && !standalone && !installed && !dismissed,
-    canInstall: isIos && !standalone && !installed && !dismissed,
+    canPrompt: !!installEvt && eligible,
+    canInstall: isIos && eligible,
     isIos,
     install,
     dismiss,
+    markShown,
+    visitCount,
   };
 }

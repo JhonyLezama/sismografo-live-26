@@ -1,21 +1,68 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useInstallPrompt, usePrefersReducedMotion } from "../hooks";
+import { useInstallPrompt, useMediaQuery, usePrefersReducedMotion } from "../hooks";
+import { onInstallSignal } from "../installSignals";
 
-const INSTALL_DELAY_MS = 2 * 60 * 1000;
+const DELAY_FIRST_MS = 2 * 60 * 1000;
+const DELAY_RETURN_MS = 35 * 1000;
+const SIGNAL_DELAY_MS = 800;
 
-export default function InstallBanner() {
+interface Props {
+  blocked?: boolean;
+}
+
+export default function InstallBanner({ blocked = false }: Props) {
   const pwa = useInstallPrompt();
   const reduced = usePrefersReducedMotion();
-  const [ready, setReady] = useState(false);
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
 
+  const [signal, setSignal] = useState(false);
+  const [timerFired, setTimerFired] = useState(false);
+  const [shown, setShown] = useState(false);
+  const [fsActive, setFsActive] = useState(() => !!document.fullscreenElement);
+  const markedRef = useRef(false);
+
+  useEffect(() => onInstallSignal(() => setSignal(true)), []);
+
+  /* la señal dispara la muestra casi al instante */
   useEffect(() => {
-    const id = window.setTimeout(() => setReady(true), INSTALL_DELAY_MS);
-    return () => window.clearInterval(id);
+    if (!signal) return;
+    const id = window.setTimeout(() => setTimerFired(true), SIGNAL_DELAY_MS);
+    return () => window.clearTimeout(id);
+  }, [signal]);
+
+  /* temporizador: los recurrentes esperan menos que la primera visita */
+  useEffect(() => {
+    const delay = pwa.visitCount >= 2 ? DELAY_RETURN_MS : DELAY_FIRST_MS;
+    const id = window.setTimeout(() => setTimerFired(true), delay);
+    return () => window.clearTimeout(id);
+  }, [pwa.visitCount]);
+
+  /* pantalla completa del mapa (nativa + fallback) */
+  useEffect(() => {
+    const sync = () => setFsActive(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", sync);
+    return () => document.removeEventListener("fullscreenchange", sync);
   }, []);
 
-  const visible = ready && (pwa.canPrompt || pwa.canInstall);
-  if (!visible) return null;
+  const blockedNow = blocked || fsActive;
+
+  const visible = useMemo(() => {
+    if (shown || (!timerFired && !signal)) return false;
+    if (blockedNow) return false;
+    return pwa.canPrompt || pwa.canInstall;
+  }, [shown, timerFired, signal, blockedNow, pwa.canPrompt, pwa.canInstall]);
+
+  /* una sola muestra por sesión + contador hacia el tope de 3 */
+  useEffect(() => {
+    if (visible && !markedRef.current) {
+      markedRef.current = true;
+      setShown(true);
+      pwa.markShown();
+    }
+  }, [visible, pwa.markShown]);
+
+  const title = pwa.isIos ? "Añadir a pantalla de inicio" : isDesktop ? "Instalar como app" : "Instalar la aplicación";
 
   return (
     <AnimatePresence>
@@ -47,9 +94,7 @@ export default function InstallBanner() {
               </span>
               <div>
                 <div className="font-display text-sm tracking-[0.08em] text-bone">SISMÓGRAFO·26</div>
-                <div className="font-mono text-[9px] tracking-[0.22em] text-amber uppercase">
-                  {pwa.isIos ? "Añadir a pantalla de inicio" : "Instalar la aplicación"}
-                </div>
+                <div className="font-mono text-[9px] tracking-[0.22em] text-amber uppercase">{title}</div>
               </div>
             </div>
             <button
@@ -71,7 +116,9 @@ export default function InstallBanner() {
             </p>
           ) : (
             <p className="mt-2.5 text-xs leading-relaxed text-fog">
-              Acceso directo desde tu pantalla de inicio y funciona sin conexión.
+              {isDesktop
+                ? "Ventana propia con acceso directo y datos que funcionan sin conexión."
+                : "Acceso directo desde tu pantalla de inicio y funciona sin conexión."}
             </p>
           )}
 
@@ -80,7 +127,7 @@ export default function InstallBanner() {
               onClick={pwa.install}
               className="chip-btn mt-3 w-full border border-amber/60 bg-amber/15 px-4 py-2 font-mono text-[11px] tracking-[0.18em] text-amber uppercase hover:bg-amber/25"
             >
-              ⬇ Instalar
+              ⬇ {isDesktop ? "Instalar como app" : "Instalar"}
             </button>
           )}
         </motion.div>

@@ -6,6 +6,7 @@ import BottomSheet from "./components/BottomSheet";
 import { fetchLiveQuakes, timeAgo, feedUrl, loadLiveCache, USGS_WINDOWS } from "./data/usgs";
 import type { LiveQuake, LiveWindow } from "./data/usgs";
 import { downloadLiveCSV, downloadQuakesCSV, downloadQuakesGeoJSON } from "./data/export";
+import { emitInstallSignal } from "./installSignals";
 import Ticker from "./components/Ticker";
 import Seismograph from "./components/Seismograph";
 import YearPlayer from "./components/YearPlayer";
@@ -304,12 +305,18 @@ export default function App() {
 
   const onSelect = useCallback((id: string | null) => {
     setSelectedId(id);
-    if (id) setLiveSel(null);
+    if (id) {
+      setLiveSel(null);
+      emitInstallSignal("map-select");
+    }
   }, []);
 
   const onSelectLive = useCallback((id: string | null) => {
     setLiveSel(id);
-    if (id) setSelectedId(null);
+    if (id) {
+      setSelectedId(null);
+      emitInstallSignal("map-select");
+    }
   }, []);
 
   const togglePlayer = () => {
@@ -888,7 +895,10 @@ export default function App() {
                   {soundOn ? "🔔 ALERTA SONORA ON" : "🔕 ALERTA SONORA OFF"}
                 </button>
                 <button
-                  onClick={() => downloadLiveCSV(filteredLive)}
+                  onClick={() => {
+                    downloadLiveCSV(filteredLive);
+                    emitInstallSignal("export");
+                  }}
                   className="font-mono text-[10px] tracking-widest text-dim uppercase hover:text-teal"
                 >
                   Guardar CSV
@@ -1025,7 +1035,10 @@ export default function App() {
           />
           <div className="mb-4 grid grid-cols-2 items-center gap-2 md:flex md:flex-wrap">
             <button
-              onClick={() => downloadQuakesCSV(filtered)}
+              onClick={() => {
+                downloadQuakesCSV(filtered);
+                emitInstallSignal("export");
+              }}
               className="chip-btn flex min-w-0 items-center justify-center gap-1.5 overflow-hidden border border-line bg-panel px-2.5 py-2 font-mono text-[11px] tracking-[0.18em] text-fog uppercase hover:border-amber hover:text-amber"
             >
               ⬇
@@ -1035,7 +1048,10 @@ export default function App() {
               </span>
             </button>
             <button
-              onClick={() => downloadQuakesGeoJSON(filtered)}
+              onClick={() => {
+                downloadQuakesGeoJSON(filtered);
+                emitInstallSignal("export");
+              }}
               className="chip-btn flex min-w-0 items-center justify-center gap-1.5 overflow-hidden border border-line bg-panel px-2.5 py-2 font-mono text-[11px] tracking-[0.18em] text-fog uppercase hover:border-amber hover:text-amber"
             >
               ⬇
@@ -1119,8 +1135,10 @@ export default function App() {
         </div>
       </footer>
 
-      {/* aviso de instalación PWA (aparece tras 2 min, una vez) */}
-      <InstallBanner />
+      {/* aviso de instalación PWA (se difiere si hay sheet/alertas o pantalla completa) */}
+      <InstallBanner
+        blocked={(isMobile && (filtersOpen || sheetLive !== null || sheetLocal !== null)) || liveAlerts.length > 0}
+      />
 
       {/* alerta de sismo grande en vivo */}
       {liveAlerts.length > 0 && (
