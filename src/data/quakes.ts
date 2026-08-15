@@ -112,13 +112,13 @@ export const QUAKES: Quake[] = [
     depth: 110.3,
     mmi: "VIII",
     mmiLabel: "Severo",
-    deaths: 265,
+    deaths: 288,
     injured: 730,
     costM: 800,
     tsunami: false,
     plates: "Placa de Nazca ↔ Placa Sudamericana (sismo profundo)",
     summary:
-      "A pesar de originarse a más de 100 km de profundidad, causó graves daños en Pereira, Cali y el eje cafetero. Los deslizamientos de tierra y las vías averiadas aislaron localidades y dificultaron el rescate de personas bajo escombros.",
+      "El balance oficial de la Unidad Nacional para la Gestión del Riesgo de Desastres (UNGRD) registra 288 víctimas fatales. A pesar de originarse a más de 100 km de profundidad, causó graves daños en Pereira, Cali y el eje cafetero; los deslizamientos de tierra y las vías averiadas aislaron localidades y dificultaron el rescate de personas bajo escombros.",
   },
   {
     id: "id-77",
