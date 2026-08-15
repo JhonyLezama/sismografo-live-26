@@ -12,6 +12,7 @@ import Ticker from "./components/Ticker";
 import Seismograph from "./components/Seismograph";
 import YearPlayer from "./components/YearPlayer";
 import InstallBanner from "./components/InstallBanner";
+import Toaster from "./components/Toaster";
 import { useScramble, useUtcClock, useReveal, usePrefersReducedMotion, useMediaQuery } from "./hooks";
 
 /* secciones pesadas cargadas bajo demanda (código dividido por chunks) */
@@ -1230,6 +1231,9 @@ export default function App() {
           )}
         </div>
       )}
+
+      {/* toasts de descarga */}
+      <Toaster />
     </div>
   );
 }

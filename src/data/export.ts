@@ -1,5 +1,6 @@
 import type { Quake } from "./quakes";
 import type { LiveQuake } from "./usgs";
+import { toast } from "../toast";
 
 function download(name: string, content: string, mime: string) {
   saveBlob(new Blob([content], { type: mime }), name);
@@ -14,6 +15,18 @@ export function saveBlob(blob: Blob, name: string) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  const ext = name.split(".").pop()?.toLowerCase() ?? "";
+  const title =
+    ext === "png" || ext === "svg"
+      ? "Mapa exportado"
+      : ext === "csv"
+        ? name.startsWith("usgs-")
+          ? "Feed en vivo exportado"
+          : "Catálogo exportado"
+        : ext === "geojson"
+          ? "Datos exportados"
+          : "Descarga lista";
+  toast(title, name);
 }
 
 const esc = (v: string | number | boolean | null | undefined) => {
