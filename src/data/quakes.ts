@@ -34,6 +34,7 @@ export interface Quake {
   gdacsId?: string;
   needsReview?: boolean;
   wiki?: string; // enlace a artículo de Wikipedia (curado a mano o aceptado)
+  sources?: { label: string; url: string }[]; // fuentes oficiales citadas
 }
 
 export const QUAKES: Quake[] = quakesJson as Quake[];

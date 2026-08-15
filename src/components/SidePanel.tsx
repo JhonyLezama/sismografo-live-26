@@ -345,6 +345,31 @@ export function Detail({ q, onClose }: { q: Quake; onClose: () => void }) {
           </div>
         )}
 
+        {/* FUENTES oficiales citadas */}
+        {!!q.sources?.length && (
+          <div className="border border-line bg-deep/50">
+            <div className="border-b border-line/70 px-3 py-2">
+              <span className="font-mono text-[9px] tracking-[0.16em] text-dim uppercase">Fuentes citadas</span>
+            </div>
+            <div className="flex flex-wrap gap-2 p-3">
+              {q.sources.map((s) => (
+                <a
+                  key={s.label}
+                  href={s.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 border border-teal/40 bg-teal/5 px-2 py-1 font-mono text-[10px] tracking-wider text-teal hover:border-teal hover:bg-teal/10 hover:text-amber"
+                >
+                  {s.label}
+                  <svg width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 11L11 3M5 3h6v6" />
+                  </svg>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* barra de profundidad */}
         <div>
           <div className="mb-1 flex justify-between font-mono text-[10px] tracking-[0.14em] text-dim uppercase">

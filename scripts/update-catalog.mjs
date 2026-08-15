@@ -528,7 +528,66 @@ async function main() {
       }
     }
 
-    if (added.length || updated.length || backfilled.length || discrepancies.length || repairs.length || gdacsReport || wikiSug) {
+    // 6) gdacsId + sources oficiales (USGS/GDACS), sin tocar lo curado
+    let sourcesReport = null;
+    let sourcesChanged = false;
+    try {
+      let alerts = [];
+      try {
+        alerts = JSON.parse(fs.readFileSync(path.join(ROOT, "public", "gdacs.json"), "utf8")).alerts ?? [];
+      } catch { /* sin snapshot local */ }
+      if (!alerts.length && withGdacs) {
+        alerts = (await fetchGdacsSnapshot()).alerts;
+      }
+      const titleMag = (a) => {
+        const m = a.title.match(/Magnitude\s+([\d.]+)/);
+        return m ? parseFloat(m[1]) : null;
+      };
+      const linked = [];
+      for (const q of quakes) {
+        if (!q.usgsId) continue;
+        const prevLen = (q.sources ?? []).length;
+        const src = q.sources ? [...q.sources] : [];
+        if (!src.some((s) => s.label === "USGS · ficha")) {
+          src.push({
+            label: "USGS · ficha",
+            url: `https://earthquake.usgs.gov/earthquakes/eventpage/${q.usgsId}/executive`,
+          });
+        }
+        if (!q.gdacsId) {
+          let best = null;
+          let bestDist = Infinity;
+          for (const a of alerts) {
+            if (a.eventtype !== "EQ") continue;
+            const d = haversineKm([a.lat, a.lon], [q.lat, q.lon]);
+            const dm = Math.abs((titleMag(a) ?? 0) - q.mag);
+            if (d < 60 && dm <= 0.4 && d < bestDist) {
+              best = a;
+              bestDist = d;
+            }
+          }
+          if (best) {
+            q.gdacsId = best.eventid;
+            linked.push({ id: q.id, eventid: best.eventid });
+          }
+        }
+        if (q.gdacsId && !src.some((s) => s.label === "GDACS · informe")) {
+          src.push({
+            label: "GDACS · informe",
+            url: `https://www.gdacs.org/report.aspx?eventtype=EQ&eventid=${q.gdacsId}`,
+          });
+        }
+        if (src.length !== prevLen) {
+          q.sources = src;
+          sourcesChanged = true;
+        }
+      }
+      if (linked.length) sourcesReport = linked;
+    } catch (e) {
+      console.warn(`[aviso] fuentes GDACS no disponibles: ${e.message}`);
+    }
+
+    if (added.length || updated.length || backfilled.length || discrepancies.length || repairs.length || gdacsReport || wikiSug || sourcesChanged) {
       const next = JSON.stringify(quakes, null, 2) + "\n";
       if (!dryRun) fs.writeFileSync(QUI, next);
 
@@ -561,6 +620,13 @@ async function main() {
       L.push(`## usgsId vinculados (${backfilled.length})`);
       if (backfilled.length) {
         for (const b of backfilled) L.push(`- \`${b.id}\` → ${b.usgsId} (${b.via})`);
+      } else {
+        L.push("Ninguno.");
+      }
+      L.push("");
+      L.push(`## gdacsId vinculados (${sourcesReport?.length ?? 0})`);
+      if (sourcesReport?.length) {
+        for (const g of sourcesReport) L.push(`- \`${g.id}\` → ${g.eventid}`);
       } else {
         L.push("Ninguno.");
       }

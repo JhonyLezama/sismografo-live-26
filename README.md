@@ -37,6 +37,7 @@ Observatorio sísmico interactivo con el catálogo de terremotos de 2026 y la al
 - 🔗 **URL compartible**: `mag`, `region`, `month`, `modo` (local/live/both), `prof` y `zona` (área) se codifican en la URL.
 - 📊 **PAGER en la ficha**: al abrir un evento del catálogo, se consulta el detalle USGS y se muestra la estimación de impacto PAGER (nivel, CDI percibida, testigos, tsunami).
 - 📚 **Sugerencias de Wikipedia**: el workflow de datos propone enlaces a artículos; en la ficha puedes **Aceptar/Descartar** cada sugerencia (recuerdo persistido en `localStorage`).
+- 🧾 **Fuentes citadas**: cada evento del catálogo enlaza sus fuentes oficiales (ficha USGS, informe GDACS) en el bloque **Fuentes citadas** de la ficha; las cifras curadas clave apuntan a su fuente primaria (p. ej. UNGRD en Colombia).
 - 🚀 **Rendimiento**: código dividido con `React.lazy`, mapa memoizado y arrastre/zoom sin re-render por frame en móvil.
 - 📱 **PWA**: instalable desde móvil y escritorio con aviso inteligente (aparece al exportar, seleccionar en el mapa o en visitas recurrentes).
 - 🎨 Diseño oscuro "observatorio" con `Anton` / `Space Grotesk` / `IBM Plex Mono`, revelado por scroll y soporte de `prefers-reduced-motion`.
@@ -65,7 +66,7 @@ src/
     └── plates.ts              # límites de placas tectónicas (PB2002)
 
 scripts/
-└── update-catalog.mjs         # sincronización diaria USGS/GDACS/Wikipedia (con --dry-run)
+└── update-catalog.mjs         # sincronización diaria USGS/GDACS/Wikipedia + fuentes (--dry-run)
 
 public/
 ├── manifest.webmanifest       # manifest PWA (rutas relativas → subpath)

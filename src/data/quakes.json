@@ -20,7 +20,17 @@
     "plates": "Placa del Caribe ↔ Placa Sudamericana",
     "tag": "El más mortífero",
     "summary": "Segundo de un doble sismo separados por apenas 39 segundos. El norte del país y Caracas sufrieron la catástrofe sísmica más mortífera del año: más de 58.000 edificios dañados o destruidos según análisis satelital de la Universidad Estatal de Oregón.",
-    "usgsId": "us6000t7zp"
+    "usgsId": "us6000t7zp",
+    "sources": [
+      {
+        "label": "Análisis satelital · U. Estatal de Oregón",
+        "url": "https://advanced-mapping.jrc.ec.europa.eu/"
+      },
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000t7zp/executive"
+      }
+    ]
   },
   {
     "id": "ve-72",
@@ -42,7 +52,13 @@
     "tsunami": false,
     "plates": "Placa del Caribe ↔ Placa Sudamericana",
     "summary": "Sacudió el centro-norte del país 39 segundos antes del sismo principal de M7.5. Las víctimas y daños de ambos eventos se contabilizan de forma conjunta: 6.301 fallecidos en total.",
-    "usgsId": "us6000t7zc"
+    "usgsId": "us6000t7zc",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000t7zc/executive"
+      }
+    ]
   },
   {
     "id": "ph-78",
@@ -65,7 +81,13 @@
     "plates": "Placa Filipina / Fosa de Cotabato",
     "tag": "El más fuerte del año",
     "summary": "El terremoto de mayor magnitud registrado en el mundo en 2026. En General Santos colapsó un edificio universitario y las sacudidas se sintieron en gran parte de la isla. La cifra de víctimas, aun así, fue muy inferior a la de Venezuela pese a la enorme magnitud.",
-    "usgsId": "us7000srmq"
+    "usgsId": "us7000srmq",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us7000srmq/executive"
+      }
+    ]
   },
   {
     "id": "co-74",
@@ -87,7 +109,22 @@
     "tsunami": false,
     "plates": "Placa de Nazca ↔ Placa Sudamericana (sismo profundo)",
     "summary": "El balance oficial de la Unidad Nacional para la Gestión del Riesgo de Desastres (UNGRD) registra 288 víctimas fatales. A pesar de originarse a más de 100 km de profundidad, causó graves daños en Pereira, Cali y el eje cafetero; los deslizamientos de tierra y las vías averiadas aislaron localidades y dificultaron el rescate de personas bajo escombros.",
-    "usgsId": "us6000tjl2"
+    "usgsId": "us6000tjl2",
+    "sources": [
+      {
+        "label": "UNGRD · balance oficial",
+        "url": "https://portal.gestiondelriesgo.gov.co/"
+      },
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tjl2/executive"
+      },
+      {
+        "label": "GDACS · informe",
+        "url": "https://www.gdacs.org/report.aspx?eventtype=EQ&eventid=1557236"
+      }
+    ],
+    "gdacsId": "1557236"
   },
   {
     "id": "id-77",
@@ -110,7 +147,18 @@
     "plates": "Placa Australiana ↔ Placa de la Sonda",
     "tag": "Último gran sismo",
     "summary": "El sismo más reciente de gran magnitud del año, registrado frente a las Islas Menores de la Sonda Orientales. Provocó daños estructurales en la isla de Flores pero sin víctimas mortales confirmadas.",
-    "usgsId": "us6000tkt2"
+    "usgsId": "us6000tkt2",
+    "gdacsId": "1558059",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tkt2/executive"
+      },
+      {
+        "label": "GDACS · informe",
+        "url": "https://www.gdacs.org/report.aspx?eventtype=EQ&eventid=1558059"
+      }
+    ]
   },
   {
     "id": "to-75",
@@ -132,7 +180,13 @@
     "tsunami": false,
     "plates": "Placa del Pacífico ↔ Placa Australiana",
     "summary": "Un gigante silencioso: su profundidad extraordinaria de casi 230 km atenuó las sacudidas en superficie. Sin daños relevantes ni víctimas, apenas recibió atención mediática.",
-    "usgsId": "us7000s789"
+    "usgsId": "us7000s789",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us7000s789/executive"
+      }
+    ]
   },
   {
     "id": "vu-73",
@@ -154,7 +208,13 @@
     "tsunami": false,
     "plates": "Placa Australiana ↔ Placa del Pacífico (arco de las Nuevas Hébridas)",
     "summary": "Tercer sismo de magnitud ≥7 en apenas una semana en el Pacífico Sur, tras Tonga. El archipiélago volvió a sacudirse meses después del devastador sismo de diciembre de 2024.",
-    "usgsId": "us7000s8q0"
+    "usgsId": "us7000s8q0",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us7000s8q0/executive"
+      }
+    ]
   },
   {
     "id": "mx-73",
@@ -197,7 +257,13 @@
     "tsunami": false,
     "plates": "Subducción profunda del mar de Célebes",
     "summary": "El primer sismo de magnitud ≥7 del año y uno de los más profundos jamás registrados en la región (629 km). Minutos después generó una réplica de M6.5 sentida en Tailandia.",
-    "usgsId": "us6000sasz"
+    "usgsId": "us6000sasz",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000sasz/executive"
+      }
+    ]
   },
   {
     "id": "jp-74",
@@ -219,7 +285,13 @@
     "tsunami": true,
     "plates": "Placa del Pacífico ↔ Placa de Ojotsk",
     "summary": "Submarino frente a la misma costa de Sanriku que sufrió el tsunami de 2011. Se emitió alerta de tsunami, pero no se produjo ninguna ola devastadora: solo dos heridos leves.",
-    "usgsId": "us6000srvu"
+    "usgsId": "us6000srvu",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000srvu/executive"
+      }
+    ]
   },
   {
     "id": "id-74",
@@ -241,7 +313,13 @@
     "tsunami": false,
     "plates": "Placa de la Sonda ↔ Placa del Pacífico (arco de Halmahera)",
     "summary": "Sismo marino en una de las zonas de colisión más complejas del planeta. Una víctima mortal y decenas de viviendas dañadas en las Molucas Septentrionales.",
-    "usgsId": "us6000sp3k"
+    "usgsId": "us6000sp3k",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000sp3k/executive"
+      }
+    ]
   },
   {
     "id": "jp-68",
@@ -263,7 +341,13 @@
     "tsunami": false,
     "plates": "Falla crustal ligada a la fosa de Ryukyu",
     "summary": "El décimo aniversario de los sismos de Kumamoto de 2016 llegó con una nueva tragedia: un sismo superficial y muy destructivo que alcanzó intensidad IX en la zona epicentral.",
-    "usgsId": "us6000tgb9"
+    "usgsId": "us6000tgb9",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tgb9/executive"
+      }
+    ]
   },
   {
     "id": "id-67",
@@ -285,7 +369,13 @@
     "tsunami": false,
     "plates": "Fragmento de Banggai ↔ Placa de la Sonda",
     "summary": "Reavivó el recuerdo del terremoto y tsunami de Palu de 2018. Tres fallecidos y daños concentrados en viviendas de mampostería no reforzada.",
-    "usgsId": "us7000st95"
+    "usgsId": "us7000st95",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us7000st95/executive"
+      }
+    ]
   },
   {
     "id": "mx-65",
@@ -307,7 +397,13 @@
     "tsunami": false,
     "plates": "Placa de Cocos ↔ Placa Norteamericana (brecha de Guerrero)",
     "summary": "El primer sismo mortal del año, en la sísmicamente activa brecha de Guerrero. Daños en viviendas de la zona de San Marcos y réplicas sentidas durante semanas en Acapulco.",
-    "usgsId": "us7000rm3k"
+    "usgsId": "us7000rm3k",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us7000rm3k/executive"
+      }
+    ]
   },
   {
     "id": "th-65",
@@ -350,7 +446,13 @@
     "tsunami": false,
     "plates": "Placa de Nazca ↔ Placa Sudamericana",
     "summary": "Sismo de subducción típico del norte chico chileno. Desprendimientos de rocas en Punitaqui y una iglesia con daños severos en Huara.",
-    "usgsId": "us6000s8gw"
+    "usgsId": "us6000s8gw",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000s8gw/executive"
+      }
+    ]
   },
   {
     "id": "us-60",
@@ -393,7 +495,13 @@
     "tsunami": false,
     "plates": "Placa India ↔ Placa Euroasiática (Hindú Kush)",
     "summary": "Demuestra que la magnitud no lo es todo: un sismo 'moderado' causó doce muertes por el colapso de viviendas de adobe y la difícil accesibilidad del Hindú Kush.",
-    "usgsId": "us6000smda"
+    "usgsId": "us6000smda",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000smda/executive"
+      }
+    ]
   },
   {
     "id": "id-58",
@@ -415,7 +523,13 @@
     "tsunami": false,
     "plates": "Placa Australiana ↔ Placa de la Sonda",
     "summary": "Una persona fallecida en Pacitan y 47 heridas, la mayoría por pánico al evacuar. Decenas de casas dañadas en Bantul, Sleman y Wonogiri.",
-    "usgsId": "us6000s6ne"
+    "usgsId": "us6000s6ne",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000s6ne/executive"
+      }
+    ]
   },
   {
     "id": "pe-55",
@@ -437,7 +551,13 @@
     "tsunami": false,
     "plates": "Placa de Nazca ↔ Placa Sudamericana",
     "summary": "Sismo superficial en plena sierra central. Seis fallecidos y daños importantes en viviendas de adobe del valle del Mantaro.",
-    "usgsId": "us7000t1q7"
+    "usgsId": "us7000t1q7",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us7000t1q7/executive"
+      }
+    ]
   },
   {
     "id": "pk-56",
@@ -459,7 +579,13 @@
     "tsunami": false,
     "plates": "Placa India ↔ Placa Euroasiática (Karakórum)",
     "summary": "Sismo en una zona remota del Karakórum. Dos fallecidos por deslizamientos de rocas que alcanzaron viviendas y senderos de montaña.",
-    "usgsId": "us7000rqik"
+    "usgsId": "us7000rqik",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us7000rqik/executive"
+      }
+    ]
   },
   {
     "id": "cn-63",
@@ -502,7 +628,13 @@
     "tsunami": false,
     "plates": "Sismicidad intraplaca del sur de China",
     "summary": "Inusual sismo en una región de baja sismicidad. Dos fallecidos y daños en viviendas rurales cerca de Liuzhou.",
-    "usgsId": "us6000syik"
+    "usgsId": "us6000syik",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000syik/executive"
+      }
+    ]
   },
   {
     "id": "eg-50",
@@ -524,7 +656,13 @@
     "tsunami": false,
     "plates": "Placa Africana / margen del golfo de Suez",
     "summary": "Raro sismo sentido con fuerza en El Cairo y la zona del canal de Suez. Una víctima mortal por colapso parcial de un edificio antiguo.",
-    "usgsId": "us6000thpb"
+    "usgsId": "us6000thpb",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000thpb/executive"
+      }
+    ]
   },
   {
     "id": "ru-62",
@@ -546,7 +684,13 @@
     "tsunami": false,
     "plates": "Placa del Pacífico ↔ Placa de Ojotsk",
     "summary": "Actividad persistente del arco de las Kuriles, meses después del megasismo de Kamchatka de 2025. Sin daños por la lejanía de zonas habitadas.",
-    "usgsId": "us7000rpcg"
+    "usgsId": "us7000rpcg",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us7000rpcg/executive"
+      }
+    ]
   },
   {
     "id": "fj-62",
@@ -589,7 +733,13 @@
     "tsunami": false,
     "plates": "Placa del Caribe ↔ Bloque Centroamericano",
     "summary": "Al menos 50 viviendas dañadas en la zona costera de Omoa, cerca de la frontera con Guatemala. Se sintió con fuerza en San Pedro Sula.",
-    "usgsId": "us7000rq11"
+    "usgsId": "us7000rq11",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us7000rq11/executive"
+      }
+    ]
   },
   {
     "id": "pl-26",
