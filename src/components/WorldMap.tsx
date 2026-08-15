@@ -742,41 +742,19 @@ export default memo(function WorldMap({
     const clone = svg.cloneNode(true) as SVGSVGElement;
     clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
 
-    /* recorte: en escritorio exporta el mapa completo (2x); en móvil, un
-       recorte vertical 9:16 centrado en la selección o en la vista visible */
+    /* en escritorio exporta el mapa completo (2x); en móvil, el mismo
+       encuadre y proporción que el recuadro del mapa (bandas incluidas),
+       conservando viewBox y preserveAspectRatio="xMidYMid meet" */
     let vb = { x: 0, y: 0, w: W, h: H };
     let outW = W * 2;
     let outH = H * 2;
     if (isMobile) {
-      const { k, tx, ty } = view;
-      const wx0 = Math.max(0, (0 - tx) / k);
-      const wx1 = Math.min(W, (W - tx) / k);
-      const wy0 = Math.max(0, (0 - ty) / k);
-      const wy1 = Math.min(H, (H - ty) / k);
-      const aspect = 9 / 16;
-      let cw = Math.min(wx1 - wx0, (wy1 - wy0) * aspect);
-      let ch = cw / aspect;
-      if (ch > wy1 - wy0) {
-        ch = wy1 - wy0;
-        cw = ch * aspect;
+      const rect = svg.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        const S = 1920 / Math.max(rect.width, rect.height);
+        outW = Math.max(1, Math.round(rect.width * S));
+        outH = Math.max(1, Math.round(rect.height * S));
       }
-      let cx = (wx0 + wx1) / 2;
-      let cy = (wy0 + wy1) / 2;
-      const sel =
-        points.find((p) => p.q.id === selectedId) ??
-        livePoints.find((p) => p.q.id === liveSelectedId);
-      if (sel && sel.x >= wx0 && sel.x <= wx1 && sel.y >= wy0 && sel.y <= wy1) {
-        cx = sel.x;
-        cy = sel.y;
-      }
-      let x0 = Math.max(0, cx - cw / 2);
-      let y0 = Math.max(0, cy - ch / 2);
-      if (x0 + cw > W) x0 = W - cw;
-      if (y0 + ch > H) y0 = H - ch;
-      vb = { x: x0, y: y0, w: cw, h: ch };
-      const scale = 1920 / ch;
-      outW = Math.round(cw * scale);
-      outH = Math.round(ch * scale);
     }
 
     clone.setAttribute("width", String(outW));
