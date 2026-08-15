@@ -182,6 +182,27 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState<string>(NAV[0][0]);
+
+  /* scroll-spy: resalta en la navegación la sección visible */
+  useEffect(() => {
+    const offset = 120;
+    const onScroll = () => {
+      let current = NAV[0][0];
+      for (const [h] of NAV) {
+        const el = document.getElementById(h.slice(1));
+        if (el && el.getBoundingClientRect().top <= offset) current = h;
+      }
+      setActiveSection(current);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, []);
 
   /* reproductor temporal del año */
   const [timePlay, setTimePlay] = useState(false);
@@ -559,7 +580,13 @@ export default function App() {
           </a>
           <nav className="hidden items-center gap-5 font-mono text-[11px] tracking-[0.16em] text-fog uppercase md:flex">
             {NAV.map(([h, l]) => (
-              <a key={h} href={h} className="chip-btn border-b border-transparent pb-0.5 hover:border-amber hover:text-amber">
+              <a
+                key={h}
+                href={h}
+                className={`chip-btn border-b pb-0.5 ${
+                  activeSection === h ? "border-amber text-amber" : "border-transparent text-fog hover:border-amber hover:text-amber"
+                }`}
+              >
                 {l}
               </a>
             ))}
@@ -590,7 +617,7 @@ export default function App() {
         </div>
       </header>
 
-      <MobileNav open={menuOpen} onClose={() => setMenuOpen(false)} items={NAV} />
+      <MobileNav open={menuOpen} onClose={() => setMenuOpen(false)} items={NAV} active={activeSection} />
 
       <Ticker quakes={QUAKES} />
 

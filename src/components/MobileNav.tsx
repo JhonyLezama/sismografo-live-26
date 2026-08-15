@@ -6,6 +6,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   items: [string, string][];
+  active?: string;
 }
 
 const listV = {
@@ -18,7 +19,7 @@ const itemV = {
   show: { opacity: 1, x: 0, transition: { type: "spring", stiffness: 320, damping: 30 } },
 };
 
-export default function MobileNav({ open, onClose, items }: Props) {
+export default function MobileNav({ open, onClose, items, active }: Props) {
   const reduced = usePrefersReducedMotion();
 
   useEffect(() => {
@@ -78,7 +79,10 @@ export default function MobileNav({ open, onClose, items }: Props) {
                     <path d="M1 10h3.5l2-5.5 2.5 11 2-7 1.2 2.8 1-1.3H19" />
                   </svg>
                 </span>
-                <span className="font-display text-sm tracking-[0.08em] text-bone">SISMÓGRAFO·26</span>
+                <span className="min-w-0 leading-tight">
+                  <span className="block truncate font-display text-lg tracking-[0.08em] text-bone">SISMÓGRAFO·26</span>
+                  <span className="block truncate font-mono text-[9px] tracking-[0.28em] text-dim uppercase">Observatorio de terremotos</span>
+                </span>
               </a>
               <button
                 onClick={onClose}
@@ -102,10 +106,13 @@ export default function MobileNav({ open, onClose, items }: Props) {
                   <a
                     href={h}
                     onClick={onClose}
-                    className="chip-btn flex items-center justify-between border-b border-line/60 px-5 py-4 font-mono text-[12px] tracking-[0.18em] text-fog uppercase hover:text-amber"
+                    aria-current={active === h ? "page" : undefined}
+                    className={`chip-btn flex items-center justify-between border-b border-line/60 px-5 py-4 font-mono text-[12px] tracking-[0.18em] uppercase ${
+                      active === h ? "border-amber/40 bg-amber/5 text-amber" : "text-fog hover:text-amber"
+                    }`}
                   >
                     {l}
-                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-dim">
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className={active === h ? "text-amber" : "text-dim"}>
                       <path d="M6 3l5 5-5 5" />
                     </svg>
                   </a>
