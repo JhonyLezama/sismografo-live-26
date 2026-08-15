@@ -60,6 +60,8 @@ function pad(n) {
   return String(n).padStart(2, "0");
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 function utcParts(ms) {
   const d = new Date(ms);
   return {
@@ -200,6 +202,38 @@ async function fetchGdacsSnapshot() {
   return {
     updatedAt: new Date().toISOString(),
     alerts: parseGdacsRss(await res.text()),
+  };
+}
+
+/* ---------- Wikipedia (sugerencias de enlace, nunca se aplican solas) ---------- */
+
+const WIKI_API = "https://es.wikipedia.org/w/api.php";
+
+async function wikiSearch(title) {
+  const url = `${WIKI_API}?action=query&list=search&srsearch=${encodeURIComponent(
+    title,
+  )}&format=json&srlimit=1&origin=*`;
+  const get = async () => {
+    const headers = {
+      Accept: "application/json",
+      "User-Agent": "sismografo-26-data-bot/1.0 (https://github.com/JhonyLezama/sismografo-live-26)",
+    };
+    const res = await fetch(url, { headers });
+    if (res.status === 429) {
+      await sleep(2000);
+      return fetch(url, { headers });
+    }
+    return res;
+  };
+  const res = await get();
+  if (!res.ok) throw new Error(`wikipedia: HTTP ${res.status}`);
+  const js = await res.json();
+  const hit = js?.query?.search?.[0];
+  if (!hit) return null;
+  return {
+    title: hit.title,
+    snippet: (hit.snippet || "").replace(/<[^>]+>/g, "").slice(0, 220),
+    url: `https://es.wikipedia.org/wiki/${hit.title.replace(/ /g, "_")}`,
   };
 }
 
@@ -459,7 +493,42 @@ async function main() {
       }
     }
 
-    if (added.length || updated.length || backfilled.length || discrepancies.length || repairs.length || gdacsReport) {
+    // 5) Wikipedia: sugerencias de enlace para eventos con usgsId y sin wiki
+    let wikiSug = null;
+    if (withWiki) {
+      try {
+        const WSF = path.join(ROOT, "public", "wikipedia-suggestions.json");
+        let prev = {};
+        try {
+          prev = JSON.parse(fs.readFileSync(WSF, "utf8")).suggestions ?? {};
+        } catch { /* primer run */ }
+        const sug = { ...prev };
+        const year = new Date().getUTCFullYear();
+        const newly = [];
+        for (const q of quakes) {
+          if (!q.usgsId || q.wiki || sug[q.id]) continue;
+          const hit = await wikiSearch(`Terremoto ${q.country} ${year}`);
+          if (hit) {
+            sug[q.id] = hit;
+            newly.push({ id: q.id, ...hit });
+          }
+          await sleep(350);
+        }
+        if (newly.length) {
+          const body =
+            JSON.stringify({ updatedAt: new Date().toISOString(), suggestions: sug }, null, 2) + "\n";
+          if (!dryRun) {
+            fs.mkdirSync(path.dirname(WSF), { recursive: true });
+            fs.writeFileSync(WSF, body);
+          }
+          wikiSug = newly;
+        }
+      } catch (e) {
+        console.warn(`[aviso] Wikipedia no disponible: ${e.message}`);
+      }
+    }
+
+    if (added.length || updated.length || backfilled.length || discrepancies.length || repairs.length || gdacsReport || wikiSug) {
       const next = JSON.stringify(quakes, null, 2) + "\n";
       if (!dryRun) fs.writeFileSync(QUI, next);
 
@@ -511,6 +580,13 @@ async function main() {
         L.push(`## Alertas GDACS nuevas (Red/Orange) (${gdacsReport.length})`);
         for (const a of gdacsReport) {
           L.push(`- **${a.alertlevel}** · ${a.title} · ${a.country} · \`${a.eventid}\``);
+        }
+        L.push("");
+      }
+      if (wikiSug && wikiSug.length) {
+        L.push(`## Sugerencias Wikipedia (revisar antes de aceptar) (${wikiSug.length})`);
+        for (const w of wikiSug) {
+          L.push(`- \`${w.id}\` · [${w.title}](${w.url})`);
         }
         L.push("");
       }

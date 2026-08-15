@@ -33,6 +33,7 @@ export interface Quake {
   usgsId?: string;
   gdacsId?: string;
   needsReview?: boolean;
+  wiki?: string; // enlace a artículo de Wikipedia (curado a mano o aceptado)
 }
 
 export const QUAKES: Quake[] = quakesJson as Quake[];
@@ -76,6 +77,12 @@ export const mmiColor = (mmi: string) => {
   };
   return map[mmi] ?? "#8fa3a0";
 };
+
+const ROMAN = [
+  "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII",
+];
+
+export const toRoman = (n: number) => ROMAN[Math.max(0, Math.min(11, Math.round(n) - 1))];
 
 export const depthClass = (d: number) =>
   d < 70 ? { label: "Superficial", color: "#f0603c" }

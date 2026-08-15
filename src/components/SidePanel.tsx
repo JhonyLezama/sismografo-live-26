@@ -1,7 +1,10 @@
+import { useEffect, useReducer, useState } from "react";
 import type { Quake } from "../data/quakes";
-import { magColor, mmiColor, depthClass, fmt, fmtMoney, dateShort } from "../data/quakes";
-import type { LiveQuake } from "../data/usgs";
-import { timeAgo, fmtUtc } from "../data/usgs";
+import { magColor, mmiColor, depthClass, fmt, fmtMoney, dateShort, toRoman } from "../data/quakes";
+import type { LiveQuake, UsgsDetail } from "../data/usgs";
+import { timeAgo, fmtUtc, fetchUsgsDetail, pagerColor, pagerLabel } from "../data/usgs";
+import type { WikiSuggestion } from "../data/wikiSuggest";
+import { loadWikiSuggestions, wikiAcceptedUrl, acceptWiki, wikiDismissed, dismissWiki } from "../data/wikiSuggest";
 import Seismograph from "./Seismograph";
 
 /* ---- ficha de evento EN VIVO (USGS) ---- */
@@ -187,6 +190,42 @@ export function Detail({ q, onClose }: { q: Quake; onClose: () => void }) {
   const c = magColor(q.mag);
   const dc = depthClass(q.depth);
   const amp = Math.min(1, 0.1 + ((q.mag - 2.5) / 5.3) * 0.9);
+
+  const [pager, setPager] = useState<UsgsDetail | null | "loading">(q.usgsId ? "loading" : null);
+  useEffect(() => {
+    if (!q.usgsId) {
+      setPager(null);
+      return;
+    }
+    let active = true;
+    setPager("loading");
+    fetchUsgsDetail(q.usgsId).then((d) => {
+      if (active) setPager(d);
+    });
+    return () => {
+      active = false;
+    };
+  }, [q.usgsId]);
+
+  const [wikiSugg, setWikiSugg] = useState<WikiSuggestion | null>(null);
+  const [, force] = useReducer((x) => x + 1, 0);
+  useEffect(() => {
+    if (!q.id) {
+      setWikiSugg(null);
+      return;
+    }
+    let active = true;
+    setWikiSugg(null);
+    loadWikiSuggestions().then((m) => {
+      if (active) setWikiSugg(m[q.id] ?? null);
+    });
+    return () => {
+      active = false;
+    };
+  }, [q.id]);
+
+  const acceptedUrl = q.wiki ?? wikiAcceptedUrl(q.id);
+  const wikiDismissedNow = !acceptedUrl && wikiSugg && wikiDismissed(q.id);
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-start justify-between gap-3 border-b border-line px-4 py-3">
@@ -243,6 +282,69 @@ export function Detail({ q, onClose }: { q: Quake; onClose: () => void }) {
           />
         </div>
 
+        {/* PAGER · estimación de impacto (USGS) */}
+        {pager !== null && (
+          <div className="border border-line bg-deep/50">
+            <div className="flex items-center justify-between gap-2 border-b border-line/70 px-3 py-2">
+              <span className="font-mono text-[9px] tracking-[0.16em] text-dim uppercase">
+                PAGER · estimación de impacto (USGS)
+              </span>
+              {pager !== "loading" && pager?.alert && (
+                <span
+                  className="inline-block border px-1.5 py-0.5 font-mono text-[9px] font-semibold tracking-[0.18em] uppercase"
+                  style={{
+                    color: pagerColor(pager.alert),
+                    borderColor: `${pagerColor(pager.alert)}66`,
+                    background: `${pagerColor(pager.alert)}12`,
+                  }}
+                >
+                  {pager.alert}
+                </span>
+              )}
+            </div>
+            <div className="p-3">
+              {pager === "loading" ? (
+                <p className="font-mono text-[10px] text-dim">Sincronizando con USGS…</p>
+              ) : !pager ? (
+                <p className="font-mono text-[10px] leading-relaxed text-dim">
+                  Sin ficha PAGER disponible para este evento.
+                </p>
+              ) : (
+                <>
+                  <p
+                    className="text-xs leading-relaxed"
+                    style={{ color: pager.alert ? pagerColor(pager.alert) : "#8fa3a0" }}
+                  >
+                    {pager.alert ? pagerLabel(pager.alert) : "No supera el umbral PAGER: sin impacto relevante previsto."}
+                  </p>
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    <Stat
+                      label="CDI percibida"
+                      value={pager.cdi ? `MMI ${toRoman(pager.cdi)}` : "—"}
+                      color={pager.cdi ? mmiColor(toRoman(pager.cdi)) : "#8fa3a0"}
+                    />
+                    <Stat label="Testigos" value={pager.felt ? fmt(pager.felt) : "—"} />
+                    <Stat label="Tsunami" value={pager.tsunami ? "Alerta" : "No"} color={pager.tsunami ? "#f0603c" : "#8fa3a0"} />
+                  </div>
+                  {pager.url && (
+                    <a
+                      href={pager.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-3 inline-flex items-center gap-1 font-mono text-[10px] tracking-wider text-teal uppercase hover:text-amber"
+                    >
+                      Ficha oficial USGS
+                      <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 11L11 3M5 3h6v6" />
+                      </svg>
+                    </a>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* barra de profundidad */}
         <div>
           <div className="mb-1 flex justify-between font-mono text-[10px] tracking-[0.14em] text-dim uppercase">
@@ -258,6 +360,53 @@ export function Detail({ q, onClose }: { q: Quake; onClose: () => void }) {
             <div className="absolute -top-1 h-4 w-0.5 bg-bone" style={{ left: `${Math.min(100, (q.depth / 650) * 100)}%` }} />
           </div>
         </div>
+
+        {/* sugerencia de Wikipedia + flujo de aceptación */}
+        {!acceptedUrl && wikiSugg && !wikiDismissedNow && (
+          <div className="border border-amber/50 bg-amber/10 p-3">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[9px] tracking-[0.16em] text-amber uppercase">Sugerencia de enlace</span>
+              <span className="ml-auto inline-block border border-amber/50 px-1.5 py-0.5 font-mono text-[9px] text-amber">Wikipedia</span>
+            </div>
+            <p className="mt-2 text-sm leading-relaxed font-semibold text-bone/90">{wikiSugg.title}</p>
+            <p className="mt-1 text-xs leading-relaxed text-fog">{wikiSugg.snippet}</p>
+            <div className="mt-3 flex gap-2">
+              <button
+                onClick={() => {
+                  acceptWiki(q.id, wikiSugg.url);
+                  force();
+                }}
+                className="chip-btn flex-1 border border-teal/60 bg-teal/10 px-3 py-1.5 font-mono text-[10px] tracking-[0.16em] text-teal uppercase hover:bg-teal/20"
+              >
+                Aceptar enlace
+              </button>
+              <button
+                onClick={() => {
+                  dismissWiki(q.id);
+                  force();
+                }}
+                aria-label="Descartar sugerencia"
+                title="Descartar sugerencia"
+                className="chip-btn border border-line px-3 py-1.5 font-mono text-[10px] tracking-[0.16em] text-dim uppercase hover:border-verm hover:text-verm"
+              >
+                Descartar
+              </button>
+            </div>
+          </div>
+        )}
+        {acceptedUrl && (
+          <a
+            href={acceptedUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center justify-between border border-teal/50 bg-teal/10 px-4 py-3 text-sm font-semibold text-teal transition-colors hover:bg-teal/20"
+          >
+            Leer en Wikipedia
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 11L11 3M5 3h6v6" />
+            </svg>
+          </a>
+        )}
 
         <div className="space-y-2 border-t border-line pt-3">
           <p className="text-sm leading-relaxed text-bone/85">{q.summary}</p>

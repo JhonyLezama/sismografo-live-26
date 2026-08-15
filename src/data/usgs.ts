@@ -124,3 +124,69 @@ export function fmtUtc(ts: number): string {
   const meses = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
   return `${p(dt.getUTCDate())} ${meses[dt.getUTCMonth()]} · ${p(dt.getUTCHours())}:${p(dt.getUTCMinutes())} UTC`;
 }
+
+/* ---------- detalle por evento (ficha PAGER) ---------- */
+
+export interface UsgsDetail {
+  id: string;
+  alert: string | null; // green | yellow | orange | red
+  cdi: number | null;
+  mmi: number | null;
+  sig: number;
+  felt: number | null;
+  tsunami: boolean;
+  url: string;
+  place: string | null;
+  mag: number | null;
+}
+
+const DETAIL_CACHE = new Map<string, Promise<UsgsDetail | null>>();
+
+export function fetchUsgsDetail(id: string): Promise<UsgsDetail | null> {
+  if (!DETAIL_CACHE.has(id)) {
+    DETAIL_CACHE.set(
+      id,
+      (async () => {
+        try {
+          const res = await fetch(
+            `https://earthquake.usgs.gov/earthquakes/feed/v1.0/detail/${id}.geojson`,
+            { headers: { Accept: "application/json" } },
+          );
+          if (!res.ok) return null;
+          const gj = (await res.json()) as {
+            id: string;
+            properties: Record<string, unknown>;
+          };
+          const p = gj.properties ?? {};
+          return {
+            id: gj.id,
+            alert: typeof p.alert === "string" ? p.alert : null,
+            cdi: typeof p.cdi === "number" ? p.cdi : null,
+            mmi: typeof p.mmi === "number" ? p.mmi : null,
+            sig: typeof p.sig === "number" ? p.sig : 0,
+            felt: typeof p.felt === "number" ? p.felt : null,
+            tsunami: p.tsunami === 1,
+            url: typeof p.url === "string" ? p.url : "",
+            place: typeof p.place === "string" ? p.place : null,
+            mag: typeof p.mag === "number" ? p.mag : null,
+          };
+        } catch {
+          return null;
+        }
+      })(),
+    );
+  }
+  return DETAIL_CACHE.get(id) ?? Promise.resolve(null);
+}
+
+export const pagerColor = (level: string) =>
+  level === "red" ? "#e23a62" : level === "orange" ? "#f59e42" : level === "yellow" ? "#e8c14a" : "#3ec9a7";
+
+export const pagerLabel = (level: string) =>
+  level === "red"
+    ? "Impacto elevado: daños y víctimas previstos"
+    : level === "orange"
+      ? "Impacto probable: daños y víctimas esperables"
+      : level === "yellow"
+        ? "Impacto limitado: posibles daños locales"
+        : "Impacto mínimo: poca exposición poblacional";
