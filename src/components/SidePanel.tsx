@@ -183,7 +183,7 @@ function Stat({ label, value, color }: { label: string; value: string; color?: s
   );
 }
 
-function Detail({ q, onClose }: { q: Quake; onClose: () => void }) {
+export function Detail({ q, onClose }: { q: Quake; onClose: () => void }) {
   const c = magColor(q.mag);
   const dc = depthClass(q.depth);
   const amp = Math.min(1, 0.1 + ((q.mag - 2.5) / 5.3) * 0.9);
@@ -208,7 +208,7 @@ function Detail({ q, onClose }: { q: Quake; onClose: () => void }) {
         </button>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
+      <div className="no-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
         {q.tag && (
           <span className="inline-block border border-amber/60 bg-amber/10 px-2 py-0.5 font-mono text-[10px] tracking-[0.16em] text-amber uppercase">
             {q.tag}
@@ -284,7 +284,7 @@ export default function SidePanel({ quakes, selectedId, onSelect }: Props) {
             <div className="font-mono text-[10px] tracking-[0.2em] text-dim uppercase">Ranking por magnitud</div>
             <h3 className="mt-1 font-display text-xl tracking-wide text-bone">LOS MAYORES DEL AÑO</h3>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto">
             {ranked.length === 0 && (
               <p className="px-4 py-8 text-sm text-dim">Ningún sismo coincide con los filtros.</p>
             )}

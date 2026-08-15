@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Region, Quake } from "./data/quakes";
 import { QUAKES, ANNUAL, fmt, MONTHS_ES, magColor, depthClass } from "./data/quakes";
 import WorldMap, { type MapMode, type AreaRect } from "./components/WorldMap";
-import SidePanel, { LiveDetail, LiveList } from "./components/SidePanel";
+import SidePanel, { LiveDetail, LiveList, Detail } from "./components/SidePanel";
+import BottomSheet from "./components/BottomSheet";
 import { fetchLiveQuakes, timeAgo, feedUrl, loadLiveCache, USGS_WINDOWS } from "./data/usgs";
 import type { LiveQuake, LiveWindow } from "./data/usgs";
 import { downloadLiveCSV, downloadQuakesCSV, downloadQuakesGeoJSON } from "./data/export";
@@ -12,7 +13,7 @@ import Balance from "./components/Balance";
 import Ticker from "./components/Ticker";
 import Seismograph from "./components/Seismograph";
 import YearPlayer from "./components/YearPlayer";
-import { useScramble, useUtcClock, useReveal, usePrefersReducedMotion } from "./hooks";
+import { useScramble, useUtcClock, useReveal, usePrefersReducedMotion, useMediaQuery } from "./hooks";
 
 const REGIONS: ("Todas" | Region)[] = [
   "Todas", "Sudamérica", "Norteamérica", "Asia", "Oceanía", "Europa", "África",
@@ -40,7 +41,8 @@ const DEPTH_LABEL: Record<Exclude<DepthFilter, "all">, string> = {
 const readUrl = () => {
   const p = new URLSearchParams(window.location.search);
   const mag = Number(p.get("mag"));
-  const m = Number(p.get("month"));
+  const mRaw = p.get("month");
+  const m = mRaw === null || mRaw === "" ? -1 : Number(mRaw);
   const region = p.get("region");
   const modo = p.get("modo");
   const prof = p.get("prof");
@@ -131,6 +133,7 @@ export default function App() {
   const [area, setArea] = useState<AreaRect | null>(urlInit.area ?? null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   /* reproductor temporal del año */
   const [timePlay, setTimePlay] = useState(false);
@@ -204,6 +207,7 @@ export default function App() {
 
   const clock = useUtcClock();
   const reduced = usePrefersReducedMotion();
+  const isMobile = useMediaQuery("(max-width: 1023px)");
   const mapSecRef = useRef<HTMLDivElement | null>(null);
 
   const line1 = useScramble("LA TIERRA TEMBLÓ");
@@ -235,6 +239,26 @@ export default function App() {
     [filtered, timeMonth]
   );
 
+  /* la capa en vivo se filtra igual que la local salvo región y mes (ventana móvil) */
+  const filteredLive = useMemo(
+    () =>
+      liveQuakes.filter(
+        (q) =>
+          q.mag >= minMag &&
+          (depth === "all" || depthClass(q.depth).label === DEPTH_LABEL[depth]) &&
+          (!area || (q.lat >= area.minLat && q.lat <= area.maxLat && q.lon >= area.minLon && q.lon <= area.maxLon))
+      ),
+    [liveQuakes, minMag, depth, area]
+  );
+
+  const selectMapMode = (m: MapMode) => {
+    if (m === "live") {
+      setRegion("Todas");
+      setMonth(-1);
+    }
+    setMapMode(m);
+  };
+
   const togglePlayer = () => {
     if (timePlay) setTimePlay(false);
     else {
@@ -248,7 +272,10 @@ export default function App() {
     setTimeMonth(-1);
   };
 
-  useEffect(() => setSelectedId(null), [minMag, region, month, depth, area]);
+  useEffect(() => {
+    setSelectedId(null);
+    setLiveSel(null);
+  }, [minMag, region, month, depth, area]);
 
   /* filtros compartibles por URL */
   useEffect(() => {
@@ -271,10 +298,22 @@ export default function App() {
     });
   };
 
-  const liveMax = liveQuakes.reduce((m, q) => Math.max(m, q.mag), 0);
-  const liveCountries = new Set(liveQuakes.map((q) => q.country)).size;
-  const liveTsunami = liveQuakes.filter((q) => q.tsunami).length;
-  const latest = liveQuakes[0];
+  const liveMax = filteredLive.reduce((m, q) => Math.max(m, q.mag), 0);
+  const liveCountries = new Set(filteredLive.map((q) => q.country)).size;
+  const liveTsunami = filteredLive.filter((q) => q.tsunami).length;
+  const latest = filteredLive[0];
+
+  const sheetLive = liveSel ? filteredLive.find((q) => q.id === liveSel) ?? null : null;
+  const sheetLocal = !sheetLive && selectedId ? visibleQuakes.find((q) => q.id === selectedId) ?? null : null;
+
+  const filterSummary = [
+    mapMode === "live" ? "en vivo" : null,
+    minMag > 0 ? `M≥${minMag}` : null,
+    region !== "Todas" ? region : null,
+    month >= 0 ? MONTHS_ES[month] : null,
+    depth !== "all" ? DEPTH_LABEL[depth] : null,
+    area ? "zona" : null,
+  ].filter(Boolean) as string[];
 
   const captionParts = [
     region !== "Todas" ? region : null,
@@ -284,7 +323,7 @@ export default function App() {
     area ? "zona" : null,
   ];
   const caption = captionParts.some(Boolean)
-    ? `${captionParts.filter(Boolean).join(" · ")} · ${filtered.length} EVENTOS`
+    ? `${captionParts.filter(Boolean).join(" · ")} · ${mapMode === "live" ? filteredLive.length : filtered.length} EVENTOS`
     : null;
 
   const renderFilters = (_compact: boolean) => {
@@ -310,11 +349,13 @@ export default function App() {
       </div>
       {/* Región */}
       <div className={`flex min-w-0 flex-col gap-1.5 ${d("md:col-span-6 lg:col-span-2 md:flex-row md:items-center md:gap-3")}`}>
-        <span className="font-mono text-[10px] tracking-[0.2em] text-dim uppercase">Región</span>
+        <span className={`font-mono text-[10px] tracking-[0.2em] uppercase ${mapMode === "live" ? "text-dim/60" : "text-dim"}`}>Región</span>
         <select
           value={region}
+          disabled={mapMode === "live"}
           onChange={(e) => setRegion(e.target.value as (typeof REGIONS)[number])}
-          className="w-full min-w-0 chip-btn border border-line bg-panel px-3 py-1.5 font-mono text-xs text-bone outline-none hover:border-fog md:w-auto"
+          title={mapMode === "live" ? "La región solo filtra el catálogo 2026 — cámbiate a Local o Ambos" : undefined}
+          className="w-full min-w-0 chip-btn border border-line bg-panel px-3 py-1.5 font-mono text-xs text-bone outline-none hover:border-fog disabled:cursor-not-allowed disabled:opacity-40 md:w-auto"
         >
           {REGIONS.map((r) => (
             <option key={r} value={r}>{r}</option>
@@ -323,11 +364,13 @@ export default function App() {
       </div>
       {/* Mes */}
       <div className={`flex min-w-0 flex-col gap-1.5 ${d("md:col-span-6 lg:col-span-3 md:flex-row md:items-center md:gap-3")}`}>
-        <span className="font-mono text-[10px] tracking-[0.2em] text-dim uppercase">Mes</span>
+        <span className={`font-mono text-[10px] tracking-[0.2em] uppercase ${mapMode === "live" ? "text-dim/60" : "text-dim"}`}>Mes</span>
         <select
           value={month}
+          disabled={mapMode === "live"}
           onChange={(e) => setMonth(Number(e.target.value))}
-          className="w-full min-w-0 chip-btn border border-line bg-panel px-3 py-1.5 font-mono text-xs text-bone outline-none hover:border-fog md:w-auto"
+          title={mapMode === "live" ? "El mes no aplica al feed en vivo (ventana móvil)" : undefined}
+          className="w-full min-w-0 chip-btn border border-line bg-panel px-3 py-1.5 font-mono text-xs text-bone outline-none hover:border-fog disabled:cursor-not-allowed disabled:opacity-40 md:w-auto"
         >
           <option value={-1}>Todo el año</option>
           {MONTHS_ES.slice(0, 8).map((m, i) => (
@@ -364,13 +407,13 @@ export default function App() {
             ].map((o) => (
               <button
                 key={o.m}
-                onClick={() => setMapMode(o.m as MapMode)}
+                onClick={() => selectMapMode(o.m as MapMode)}
                 aria-pressed={mapMode === o.m}
                 title={
                   o.m === "local"
                     ? "Catálogo 2026 con datos locales"
                     : o.m === "live"
-                      ? "Sismos reales del USGS (últimos 30 días)"
+                      ? "Sismos reales del USGS (últimos 30 días), filtrados por magnitud, profundidad y zona"
                       : "Ambas capas superpuestas"
                 }
                 className={`chip-btn flex-1 px-1 py-1.5 font-mono text-[10px] uppercase transition-colors sm:px-3 sm:text-[11px] md:flex-none ${
@@ -385,7 +428,7 @@ export default function App() {
                 <span className="hidden sm:inline">{o.l}</span>
                 {o.m !== "local" && (
                   <span className="ml-1.5 opacity-80">
-                    · {liveStatus === "loading" ? "···" : liveQuakes.length}
+                    · {liveStatus === "loading" ? "···" : filteredLive.length}
                   </span>
                 )}
               </button>
@@ -611,7 +654,28 @@ export default function App() {
           sub="Proyección Natural Earth con los epicentros de 2026. El tamaño y el color de cada punto siguen la magnitud de momento (Mw). Rueda para hacer zoom, arrastra para moverte."
         />
 
-        <div ref={dashRef} className="rv mb-5">{renderFilters(false)}</div>
+        <div ref={dashRef} className="rv mb-5 hidden lg:block">{renderFilters(false)}</div>
+
+        <button
+          onClick={() => setFiltersOpen(true)}
+          aria-label="Abrir filtros"
+          className="chip-btn mb-5 flex w-full items-center justify-between gap-3 border border-line bg-panel px-4 py-3 text-left lg:hidden"
+        >
+          <span className="flex min-w-0 flex-wrap items-center gap-2 font-mono text-[11px] tracking-[0.18em] text-fog uppercase">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="shrink-0 text-amber">
+              <path d="M2 4h12M4.5 8h7M7 12h2" />
+            </svg>
+            Filtros
+            {filterSummary.length > 0 && (
+              <span className="border border-amber/40 bg-amber/10 px-1.5 py-0.5 font-mono text-[10px] tracking-wider text-amber">
+                {filterSummary.join(" · ")}
+              </span>
+            )}
+          </span>
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-dim">
+            <path d="M3 6l5 5 5-5" />
+          </svg>
+        </button>
 
         <YearPlayer
           playing={timePlay}
@@ -637,7 +701,7 @@ export default function App() {
                 setSelectedId(id);
                 if (id) setLiveSel(null);
               }}
-              liveQuakes={liveQuakes}
+              liveQuakes={filteredLive}
               mode={mapMode}
               liveSelectedId={liveSel}
               onSelectLive={(id) => {
@@ -651,19 +715,53 @@ export default function App() {
               onAreaChange={setArea}
             />
           </div>
-          <div className="h-[480px] min-h-0 overflow-y-auto lg:col-span-5 lg:h-full">
-            {liveSel && liveQuakes.some((q) => q.id === liveSel) ? (
+          <div className="no-scrollbar h-[480px] min-h-0 overflow-y-auto lg:col-span-5 lg:h-full">
+            {liveSel && filteredLive.some((q) => q.id === liveSel) ? (
               <LiveDetail
-                q={liveQuakes.find((q) => q.id === liveSel)!}
+                q={filteredLive.find((q) => q.id === liveSel)!}
                 onClose={() => setLiveSel(null)}
               />
             ) : mapMode === "live" ? (
-              <LiveList quakes={liveQuakes} onSelect={setLiveSel} alertIds={new Set(liveAlerts.map((a) => a.id))} />
+              <LiveList quakes={filteredLive} onSelect={setLiveSel} alertIds={new Set(liveAlerts.map((a) => a.id))} />
             ) : (
               <SidePanel quakes={visibleQuakes} selectedId={selectedId} onSelect={setSelectedId} />
             )}
           </div>
         </div>
+
+        {/* ficha de sismo en móvil */}
+        <BottomSheet
+          open={isMobile && (sheetLive !== null || sheetLocal !== null)}
+          onClose={() => {
+            setLiveSel(null);
+            setSelectedId(null);
+          }}
+        >
+          {sheetLive ? (
+            <LiveDetail q={sheetLive} onClose={() => setLiveSel(null)} />
+          ) : sheetLocal ? (
+            <Detail q={sheetLocal} onClose={() => setSelectedId(null)} />
+          ) : null}
+        </BottomSheet>
+
+        {/* filtros en móvil */}
+        <BottomSheet open={isMobile && filtersOpen} onClose={() => setFiltersOpen(false)} maxHeight="78dvh">
+          <div className="px-4 pt-1">
+            <div className="mb-3 flex items-center justify-between">
+              <span className="font-mono text-[10px] tracking-[0.24em] text-dim uppercase">Filtros del mapa</span>
+              <button
+                onClick={() => setFiltersOpen(false)}
+                aria-label="Cerrar filtros"
+                className="chip-btn grid h-8 w-8 place-items-center border border-line text-fog hover:border-verm hover:text-verm"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                  <path d="M2 2l10 10M12 2L2 12" />
+                </svg>
+              </button>
+            </div>
+            {renderFilters(true)}
+          </div>
+        </BottomSheet>
       </section>
 
       {/* ---------- 01b en vivo ---------- */}
@@ -731,7 +829,7 @@ export default function App() {
                   {soundOn ? "🔔 ALERTA SONORA ON" : "🔕 ALERTA SONORA OFF"}
                 </button>
                 <button
-                  onClick={() => downloadLiveCSV(liveQuakes)}
+                  onClick={() => downloadLiveCSV(filteredLive)}
                   className="font-mono text-[10px] tracking-widest text-dim uppercase hover:text-teal"
                 >
                   Guardar CSV
@@ -750,20 +848,20 @@ export default function App() {
                 <div className="p-5">
                   <div className="grid min-w-0 grid-cols-2 gap-2">
                     <div className="min-w-0 border border-line/70 bg-deep/50 px-4 py-3">
-                      <div className="font-display text-3xl text-teal">{liveQuakes.length}</div>
+                      <div className="font-display text-3xl text-teal">{filteredLive.length}</div>
                       <div className="mt-1 font-mono text-[9px] tracking-[0.16em] break-words text-dim uppercase">
                         Sismos M4.5+ en {USGS_WINDOWS.find((w) => w.key === liveWindow)?.days}
                       </div>
                     </div>
                     <div className="min-w-0 border border-line/70 bg-deep/50 px-4 py-3">
-                      <div className="font-display text-3xl" style={{ color: magColor(liveQuakes.reduce((m, q) => Math.max(m, q.mag), 0)) }}>
-                        M{liveQuakes.reduce((m, q) => Math.max(m, q.mag), 0).toFixed(1)}
+                      <div className="font-display text-3xl" style={{ color: magColor(liveMax) }}>
+                        M{liveMax.toFixed(1)}
                       </div>
                       <div className="mt-1 font-mono text-[9px] tracking-[0.16em] break-words text-dim uppercase">Máxima en la ventana</div>
                     </div>
                     <div className="min-w-0 border border-line/70 bg-deep/50 px-4 py-3">
                       <div className="font-mono text-sm font-semibold break-words text-bone">
-                        {liveQuakes[0] ? timeAgo(liveQuakes[0].time) : "—"}
+                        {latest ? timeAgo(latest.time) : "—"}
                       </div>
                       <div className="mt-1 font-mono text-[9px] tracking-[0.16em] break-words text-dim uppercase">Último evento</div>
                     </div>
@@ -789,7 +887,7 @@ export default function App() {
                   Últimos eventos · clic para ubicar en el mapa
                 </span>
                 <span className="shrink-0 font-mono text-[10px] tracking-widest text-teal">
-                  {liveStatus === "ok" ? `MOSTRANDO ${Math.min(12, liveQuakes.length)} DE ${liveQuakes.length}` : ""}
+                  {liveStatus === "ok" ? `MOSTRANDO ${Math.min(12, filteredLive.length)} DE ${filteredLive.length}` : ""}
                 </span>
               </div>
               {liveStatus === "loading" ? (
@@ -800,7 +898,7 @@ export default function App() {
                 </div>
               ) : (
                 <ul className="divide-y divide-line/60">
-                  {liveQuakes.slice(0, 12).map((q) => {
+                  {filteredLive.slice(0, 12).map((q) => {
                     const alert = liveAlerts.some((a) => a.id === q.id);
                     return (
                     <li key={q.id} className={alert ? "min-w-0 border-l-2 border-l-verm bg-verm/5" : "min-w-0"}>

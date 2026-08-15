@@ -58,6 +58,10 @@ body {
 ::-webkit-scrollbar-thumb { background: #24383d; border-radius: 5px; }
 ::-webkit-scrollbar-thumb:hover { background: #355058; }
 
+/* oculta la barra de scroll pero conserva el desplazamiento */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
 /* ---------- layered backdrop ---------- */
 .backdrop-grid {
   position: fixed;

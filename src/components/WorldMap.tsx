@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { geoNaturalEarth1, geoPath, geoGraticule10 } from "d3-geo";
 import { feature, mesh } from "topojson-client";
 import land110 from "world-atlas/land-110m.json";
 import countries110 from "world-atlas/countries-110m.json";
 import type { Quake } from "../data/quakes";
-import { magColor, dateShort, fmt, depthClass } from "../data/quakes";
+import { magColor, dateShort, fmt, fmtMoney, depthClass, mmiColor } from "../data/quakes";
 import type { LiveQuake } from "../data/usgs";
 import { timeAgo } from "../data/usgs";
 import { PLATES } from "../data/plates";
 import { saveBlob } from "../data/export";
-import { usePrefersReducedMotion } from "../hooks";
+import { useMediaQuery, usePrefersReducedMotion } from "../hooks";
 
 const W = 980;
 const H = 500;
@@ -220,6 +221,141 @@ const clampView = (k: number, tx: number, ty: number): View => ({
   ty: Math.min(0, Math.max(H - H * k, ty)),
 });
 
+/* estilo de control activo (recortar / placas) */
+const BTN_ACTIVE = "border-amber bg-amber/15 text-amber";
+
+function SelectionSummary({
+  selPlate,
+  selPlateParts,
+  selLive,
+  selQuake,
+  onClose,
+}: {
+  selPlate: PlateDraw | null;
+  selPlateParts: string[];
+  selLive: LiveQuake | null;
+  selQuake: Quake | null;
+  onClose: () => void;
+}) {
+  return (
+    <>
+      <div className="flex items-center justify-between gap-2 border-b border-line/70 px-3 py-1.5">
+        <span className="font-mono text-[9px] tracking-[0.2em] text-dim uppercase">
+          {selPlate ? "Límite de placa" : selLive ? "Registro en vivo · USGS" : "Ficha del evento"}
+        </span>
+        <button
+          onClick={onClose}
+          aria-label="Cerrar resumen"
+          title="Cerrar resumen"
+          className="chip-btn grid h-5 w-5 place-items-center border border-line text-dim hover:border-verm hover:text-verm"
+        >
+          <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+            <path d="M4 4l8 8M12 4l-8 8" />
+          </svg>
+        </button>
+      </div>
+
+      {selPlate && (
+        <div className="space-y-1.5 px-3 py-2.5">
+          <div className="font-display text-base leading-tight text-amber">{selPlate.name}</div>
+          {selPlateParts.length === 2 ? (
+            <div className="font-mono text-[10px] leading-relaxed text-dim">
+              Límite entre las placas <span className="text-bone">{selPlateParts[0]}</span> y{" "}
+              <span className="text-bone">{selPlateParts[1]}</span>
+            </div>
+          ) : (
+            <div className="font-mono text-[10px] leading-relaxed text-dim">Límite entre dos placas tectónicas</div>
+          )}
+        </div>
+      )}
+
+      {selLive && (
+        <div className="space-y-2 px-3 py-2.5">
+          <div className="flex items-center gap-2">
+            <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-teal" />
+            <span className="font-mono text-[9px] tracking-[0.2em] text-teal uppercase">En vivo · USGS</span>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="font-display text-2xl leading-none tracking-wide" style={{ color: magColor(selLive.mag) }}>
+              M{selLive.mag.toFixed(1)}
+            </span>
+            <span className="text-sm text-bone">{selLive.country}</span>
+          </div>
+          <div
+            className="border-l-2 pl-2 font-mono text-[10px] leading-relaxed text-fog"
+            style={{ borderColor: magColor(selLive.mag) }}
+          >
+            {selLive.place}
+          </div>
+          <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 font-mono text-[10px]">
+            <span className="text-dim">Hace</span>
+            <span className="text-bone">{timeAgo(selLive.time)}</span>
+            <span className="text-dim">Profundidad</span>
+            <span className="text-bone">{selLive.depth} km</span>
+            <span className="text-dim">Impacto</span>
+            <span className="text-bone">sig {selLive.sig}</span>
+            <span className="text-dim">Tsunami</span>
+            <span className={selLive.tsunami ? "text-verm" : "text-fog"}>{selLive.tsunami ? "Sí" : "No"}</span>
+          </div>
+        </div>
+      )}
+
+      {selQuake && (
+        <div className="space-y-2 px-3 py-2.5">
+          <div className="flex items-baseline gap-2">
+            <span className="font-display text-2xl leading-none tracking-wide" style={{ color: magColor(selQuake.mag) }}>
+              M{selQuake.mag.toFixed(1)}
+            </span>
+            <span className="text-sm text-bone">{selQuake.country}</span>
+          </div>
+          <div
+            className="border-l-2 pl-2 font-mono text-[10px] leading-relaxed text-fog"
+            style={{ borderColor: magColor(selQuake.mag) }}
+          >
+            {selQuake.place}
+          </div>
+          <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 font-mono text-[10px]">
+            <span className="text-dim">Fecha</span>
+            <span className="text-bone">
+              {dateShort(selQuake.date)} · {selQuake.time} UTC
+            </span>
+            <span className="text-dim">Profundidad</span>
+            <span className="text-bone">
+              {selQuake.depth} km · {depthClass(selQuake.depth).label}
+            </span>
+            <span className="text-dim">Región</span>
+            <span className="text-bone">{selQuake.region}</span>
+            <span className="text-dim">Intensidad</span>
+            <span className="text-bone">
+              <span style={{ color: mmiColor(selQuake.mmi) }}>{selQuake.mmi}</span> · {selQuake.mmiLabel}
+            </span>
+            {selQuake.deaths > 0 && (
+              <>
+                <span className="text-dim">Víctimas</span>
+                <span className="text-verm">{fmt(selQuake.deaths)}</span>
+              </>
+            )}
+            {selQuake.injured > 0 && (
+              <>
+                <span className="text-dim">Heridos</span>
+                <span className="text-verm">{fmt(selQuake.injured)}</span>
+              </>
+            )}
+            {selQuake.costM != null && selQuake.costM > 0 && (
+              <>
+                <span className="text-dim">Coste</span>
+                <span className="text-bone">{fmtMoney(selQuake.costM)}</span>
+              </>
+            )}
+            <span className="text-dim">Tsunami</span>
+            <span className={selQuake.tsunami ? "text-verm" : "text-fog"}>{selQuake.tsunami ? "Sí" : "No"}</span>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function WorldMap({
   quakes,
   selectedId,
@@ -246,14 +382,30 @@ export default function WorldMap({
   const [plateSel, setPlateSel] = useState<number | null>(null);
   const [plateHover, setPlateHover] = useState<number | null>(null);
   const [barPos, setBarPos] = useState<{ x: number; y: number } | null>(null);
+  const [fullFilterOpen, setFullFilterOpen] = useState(false);
   const barRef = useRef<HTMLDivElement | null>(null);
+  const barContentRef = useRef<HTMLDivElement | null>(null);
   const barDragRef = useRef<{ sx: number; sy: number; x: number; y: number } | null>(null);
   const movedRef = useRef(false);
   const dragRef = useRef<{ px: number; py: number; tx: number; ty: number } | null>(null);
   const reduced = usePrefersReducedMotion();
+  const isMobile = useMediaQuery("(max-width: 639px)");
 
   const showLocal = mode !== "live";
   const showLiveLayer = mode !== "local";
+
+  /* selección activa para el resumen de pantalla completa */
+  const selQuake = showLocal && selectedId ? quakes.find((q) => q.id === selectedId) ?? null : null;
+  const selLive = showLiveLayer && liveSelectedId ? liveQuakes.find((q) => q.id === liveSelectedId) ?? null : null;
+  const selPlate = plateSel !== null ? PLATE_DS[plateSel] ?? null : null;
+  const selPlateParts = selPlate ? selPlate.name.split(" <-> ") : [];
+  const hasSelection = !!selPlate || !!selLive || !!selQuake;
+
+  const clearSelection = () => {
+    onSelect(null);
+    onSelectLive(null);
+    setPlateSel(null);
+  };
 
   /* pantalla completa (nativo + fallback CSS) */
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -316,21 +468,29 @@ export default function WorldMap({
         setAreaDraft(null);
         return;
       }
+      if (isMobile && isFullscreen && hasSelection) {
+        clearSelection();
+        return;
+      }
       if (isFullscreen) exitFullscreen();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isFullscreen, selectMode]);
+  }, [isFullscreen, selectMode, isMobile, hasSelection]);
 
   /* al entrar/salir de pantalla completa la barra vuelve a su posición por defecto */
   useEffect(() => {
     setBarPos(null);
+    setFullFilterOpen(false);
   }, [isFullscreen]);
 
   const onBarPointerDown = (e: React.PointerEvent) => {
     const el = barRef.current;
     if (!el) return;
+    const t = e.target as HTMLElement;
+    if (t.closest("button, select, input, a, label, textarea")) return;
+    if (e.pointerType !== "mouse" && barContentRef.current?.contains(t)) return;
     const rect = el.getBoundingClientRect();
     barDragRef.current = { sx: e.clientX, sy: e.clientY, x: rect.left, y: rect.top };
     (e.target as Element).setPointerCapture?.(e.pointerId);
@@ -527,6 +687,7 @@ export default function WorldMap({
   };
 
   const hovered = hoverId ? points.find((p) => p.q.id === hoverId) : null;
+
   const geo = cursor
     ? projection.invert?.([(cursor.x - view.tx) / view.k, (cursor.y - view.ty) / view.k])
     : null;
@@ -929,7 +1090,7 @@ export default function WorldMap({
               setSelectMode(true);
             }
           }}
-          aria-pressed={selectMode}
+          aria-pressed={selectMode || !!areaFilter}
           aria-label={selectMode ? "Cancelar marcado de área" : "Marcar área en el mapa"}
           title={
             selectMode
@@ -937,7 +1098,7 @@ export default function WorldMap({
               : "Marcar área: arrastra sobre el mapa para filtrar la zona"
           }
           className={`chip-btn grid h-7 w-7 place-items-center border border-line bg-panel/90 sm:h-8 sm:w-8 text-fog hover:border-amber hover:text-amber ${
-            selectMode ? "border-amber text-amber" : ""
+            selectMode || areaFilter ? BTN_ACTIVE : ""
           }`}
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -963,7 +1124,7 @@ export default function WorldMap({
           aria-label={showPlates ? "Ocultar límites de placas" : "Mostrar límites de placas"}
           title={showPlates ? "Ocultar límites de placas" : "Mostrar límites de placas"}
           className={`chip-btn grid h-7 w-7 place-items-center border border-line bg-panel/90 sm:h-8 sm:w-8 text-fog hover:border-amber hover:text-amber ${
-            showPlates ? "border-amber text-amber" : ""
+            showPlates ? BTN_ACTIVE : ""
           }`}
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth="1.5" strokeLinecap="round">
@@ -1039,7 +1200,11 @@ export default function WorldMap({
       </div>
 
       {/* exportar el mapa como imagen */}
-      <div className="absolute bottom-16 left-3 flex gap-1.5 sm:bottom-14 sm:flex-col">
+      <div className={`absolute left-3 z-10 flex gap-1.5 ${
+        isFullscreen
+          ? "bottom-16 flex-col sm:bottom-14"
+          : "top-5 sm:bottom-14 sm:top-auto sm:flex-col"
+      }`}>
         <button
           onClick={() => downloadMap("png")}
           title="Descargar el mapa como PNG"
@@ -1069,27 +1234,70 @@ export default function WorldMap({
       {caption && (
         <div
           className={`pointer-events-none absolute left-3 z-20 border border-amber/50 bg-abyss/85 px-3 py-1.5 font-mono text-[10px] tracking-[0.18em] text-amber uppercase ${
-            isFullscreen ? "top-16" : "top-3"
+            isFullscreen ? "top-16 hidden sm:block" : "top-3"
           }`}
         >
           {caption}
         </div>
       )}
 
-      {/* barra de filtros flotante en pantalla completa (arrastrable) */}
+      {/* pantalla completa: filtros */}
       {isFullscreen && fullscreenBar && (
-        <div
-          ref={barRef}
-          className={`absolute z-30 w-max max-w-[calc(100%-1rem)] border border-line bg-abyss/95 p-2 shadow-xl shadow-black/50 backdrop-blur-sm ${
-            barPos ? "" : "left-1/2 top-16 -translate-x-1/2"
-          }`}
-          style={barPos ? { left: barPos.x, top: barPos.y } : undefined}
-        >
+        <>
+          {/* móvil: card colapsable */}
+          <div className="absolute left-3 right-14 top-3 z-30 sm:hidden">
+            <button
+              onClick={() => setFullFilterOpen((v) => !v)}
+              aria-expanded={fullFilterOpen}
+              aria-label={fullFilterOpen ? "Ocultar filtros" : "Mostrar filtros"}
+              title={fullFilterOpen ? "Ocultar filtros" : "Mostrar filtros"}
+              className="chip-btn flex w-full items-center justify-between gap-2 border border-line bg-abyss/95 px-3 py-2 text-left shadow-xl shadow-black/50 backdrop-blur-sm"
+            >
+              <span className="flex min-w-0 flex-wrap items-center gap-2 font-mono text-[10px] tracking-[0.18em] text-fog uppercase">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="shrink-0 text-amber">
+                  <path d="M2 4h12M4.5 8h7M7 12h2" />
+                </svg>
+                Filtros
+                {caption && (
+                  <span className="border border-amber/40 bg-amber/10 px-1.5 py-0.5 font-mono text-[9px] tracking-wider text-amber">
+                    {caption}
+                  </span>
+                )}
+              </span>
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={`shrink-0 text-dim transition-transform ${fullFilterOpen ? "rotate-180" : ""}`}
+              >
+                <path d="M3 6l5 5 5-5" />
+              </svg>
+            </button>
+            {fullFilterOpen && (
+              <div className="no-scrollbar mt-1 max-h-[52vh] overflow-y-auto overscroll-contain border border-line bg-abyss/95 p-2 shadow-xl shadow-black/50 backdrop-blur-sm">
+                {fullscreenBar}
+              </div>
+            )}
+          </div>
+
+          {/* escritorio: barra arrastrable */}
           <div
-            className="mb-1.5 flex cursor-grab touch-none select-none items-center gap-2 border-b border-line/60 pb-1.5 active:cursor-grabbing"
+            ref={barRef}
+            className={`absolute z-30 hidden w-max max-w-[calc(100%-1rem)] border border-line bg-abyss/95 p-2 shadow-xl shadow-black/50 backdrop-blur-sm sm:block ${
+              barPos ? "" : "left-1/2 top-16 -translate-x-1/2"
+            }`}
+            style={barPos ? { left: barPos.x, top: barPos.y } : undefined}
             onPointerDown={onBarPointerDown}
             onPointerMove={onBarPointerMove}
             onPointerUp={onBarPointerUp}
+          >
+          <div
+            className="mb-1.5 flex cursor-grab touch-none select-none items-center gap-2 border-b border-line/60 pb-1.5 active:cursor-grabbing"
             title="Arrastra para mover"
             aria-label="Mover barra de filtros"
           >
@@ -1100,7 +1308,68 @@ export default function WorldMap({
             </span>
             <span className="font-mono text-[9px] tracking-[0.2em] text-dim uppercase">Filtros · arrastra</span>
           </div>
-          <div className="max-h-[calc(100vh-9rem)] overflow-y-auto">{fullscreenBar}</div>
+          <div ref={barContentRef} className="max-h-[calc(100vh-9rem)] overflow-y-auto">{fullscreenBar}</div>
+          </div>
+        </>
+      )}
+
+      {/* pantalla completa: resumen de la selección (escritorio) */}
+      {isFullscreen && (
+        <div className="absolute left-3 top-24 z-30 hidden w-[280px] max-w-[calc(100%-1.5rem)] sm:block">
+          {hasSelection ? (
+            <div className="overflow-hidden border border-line bg-abyss/95 shadow-xl shadow-black/50 backdrop-blur-sm">
+              <SelectionSummary
+                selPlate={selPlate}
+                selPlateParts={selPlateParts}
+                selLive={selLive}
+                selQuake={selQuake}
+                onClose={clearSelection}
+              />
+            </div>
+          ) : (
+            <div className="pointer-events-none border border-line/50 bg-abyss/75 px-3 py-2 font-mono text-[10px] leading-relaxed text-dim shadow-xl shadow-black/50 backdrop-blur-sm">
+              Haz clic en un epicentro o en un límite de placa para ver su resumen
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* pantalla completa: resumen como bottom sheet (móvil) */}
+      {isFullscreen && (
+        <div className="absolute inset-x-0 bottom-0 z-40 sm:hidden">
+          <AnimatePresence>
+            {hasSelection && (
+              <motion.div
+                key="fullsheet"
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={
+                  reduced ? { duration: 0 } : { type: "spring", stiffness: 320, damping: 32 }
+                }
+                drag={reduced ? false : "y"}
+                dragConstraints={{ top: 0, bottom: 0 }}
+                dragElastic={{ top: 0, bottom: 0.55 }}
+                onDragEnd={(_, info) => {
+                  if (info.offset.y > 90 || info.velocity.y > 600) clearSelection();
+                }}
+                className="max-h-[45vh] rounded-t-lg border border-b-0 border-line bg-panel shadow-2xl shadow-black/60"
+              >
+                <div className="flex shrink-0 cursor-grab touch-none items-center justify-center pt-3 pb-1.5 active:cursor-grabbing">
+                  <span className="h-1 w-12 rounded-full bg-fog/40" />
+                </div>
+                <div className="no-scrollbar max-h-[45vh] min-h-0 overflow-y-auto overscroll-contain pb-4">
+                  <SelectionSummary
+                    selPlate={selPlate}
+                    selPlateParts={selPlateParts}
+                    selLive={selLive}
+                    selQuake={selQuake}
+                    onClose={clearSelection}
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
     </div>
