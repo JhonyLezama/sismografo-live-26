@@ -372,8 +372,12 @@ export default memo(function WorldMap({
   onAreaChange,
 }: Props) {
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const gRef = useRef<SVGGElement | null>(null);
+  const labelsWrapRef = useRef<SVGGElement | null>(null);
   const [view, setView] = useState<View>({ k: 1, tx: 0, ty: 0 });
+  const viewRef = useRef<View>(view);
   const [smooth, setSmooth] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [hoverLiveId, setHoverLiveId] = useState<string | null>(null);
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
@@ -532,10 +536,25 @@ export default memo(function WorldMap({
     [liveQuakes]
   );
 
-  /* zoom con rueda (listener no pasivo) */
+  /* espejo de view para el pan imperativo (sin re-render por frame) */
+  useEffect(() => {
+    viewRef.current = view;
+  }, [view]);
+
+  /* zoom con rueda (listener no pasivo, coalescido por rAF) */
   useEffect(() => {
     const el = svgRef.current;
     if (!el) return;
+    const wheelState = { ...viewRef.current };
+    let raf = 0;
+    const applyWheel = () => {
+      raf = 0;
+      const nv = { k: wheelState.k, tx: wheelState.tx, ty: wheelState.ty };
+      viewRef.current = nv;
+      if (gRef.current) gRef.current.style.transform = `translate(${nv.tx}px, ${nv.ty}px) scale(${nv.k})`;
+      if (labelsWrapRef.current) labelsWrapRef.current.style.transform = `translate(${nv.tx}px, ${nv.ty}px)`;
+      setView(nv);
+    };
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const rect = el.getBoundingClientRect();
@@ -545,13 +564,23 @@ export default memo(function WorldMap({
       const mx = (e.clientX - rect.left - ox) / s;
       const my = (e.clientY - rect.top - oy) / s;
       setSmooth(false);
-      setView((v) => {
-        const k2 = Math.min(9, Math.max(1, v.k * Math.exp(-e.deltaY * 0.0016)));
-        return clampView(k2, mx - ((mx - v.tx) * k2) / v.k, my - ((my - v.ty) * k2) / v.k);
-      });
+      const oldK = wheelState.k;
+      const k2 = Math.min(9, Math.max(1, oldK * Math.exp(-e.deltaY * 0.0016)));
+      const nv = clampView(
+        k2,
+        mx - ((mx - wheelState.tx) * k2) / oldK,
+        my - ((my - wheelState.ty) * k2) / oldK
+      );
+      wheelState.k = nv.k;
+      wheelState.tx = nv.tx;
+      wheelState.ty = nv.ty;
+      if (!raf) raf = requestAnimationFrame(applyWheel);
     };
     el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      if (raf) cancelAnimationFrame(raf);
+    };
   }, []);
 
   /* centrar al seleccionar (curado o en vivo) */
@@ -628,13 +657,14 @@ export default memo(function WorldMap({
     }
     movedRef.current = false;
     setSmooth(false);
-    dragRef.current = { px: e.clientX, py: e.clientY, tx: view.tx, ty: view.ty };
+    setDragging(true);
+    dragRef.current = { px: e.clientX, py: e.clientY, tx: viewRef.current.tx, ty: viewRef.current.ty };
     (e.target as Element).setPointerCapture?.(e.pointerId);
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
     const pt = toSvg(e);
-    setCursor(pt);
+    if (!isMobile) setCursor(pt);
     if (selectMode) {
       const d = areaDraft;
       if (!d) return;
@@ -650,7 +680,12 @@ export default memo(function WorldMap({
     const dx = (e.clientX - drag.px) / s;
     const dy = (e.clientY - drag.py) / s;
     if (Math.abs(e.clientX - drag.px) + Math.abs(e.clientY - drag.py) > 5) movedRef.current = true;
-    setView((v) => clampView(v.k, drag.tx + dx, drag.ty + dy));
+    /* pan imperativo: solo DOM, sin setView por frame (móvil) */
+    const nv = clampView(viewRef.current.k, drag.tx + dx, drag.ty + dy);
+    viewRef.current = nv;
+    if (gRef.current) gRef.current.style.transform = `translate(${nv.tx}px, ${nv.ty}px) scale(${nv.k})`;
+    if (labelsWrapRef.current) labelsWrapRef.current.style.transform = `translate(${nv.tx}px, ${nv.ty}px)`;
+    if (!isMobile) setView(nv);
   };
 
   const onPointerUp = (e: React.PointerEvent) => {
@@ -669,7 +704,9 @@ export default memo(function WorldMap({
       (e.target as Element).releasePointerCapture?.(e.pointerId);
       return;
     }
+    if (dragRef.current) setView(viewRef.current);
     dragRef.current = null;
+    setDragging(false);
   };
 
   const onBackgroundClick = () => {
@@ -784,19 +821,22 @@ export default memo(function WorldMap({
         ref={svgRef}
         viewBox={`0 0 ${W} ${H}`}
         preserveAspectRatio="xMidYMid meet"
-        className="map-stage block h-full w-full touch-none select-none"
+        className={`map-stage block h-full w-full touch-none select-none ${dragging ? "is-dragging" : ""}`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerLeave={() => {
           setCursor(null);
+          if (dragRef.current) setView(viewRef.current);
           dragRef.current = null;
+          setDragging(false);
         }}
         onClick={onBackgroundClick}
         role="application"
         aria-label="Mapa mundial de epicentros de 2026"
       >
         <g
+          ref={gRef}
           style={{
             transform: `translate(${view.tx}px, ${view.ty}px) scale(${view.k})`,
             transition:
@@ -991,11 +1031,18 @@ export default memo(function WorldMap({
         </g>
 
         {/* nombres de países (tamaño constante en pantalla, siguen al mapa) */}
-        <g pointerEvents="none">
+        <g
+          ref={labelsWrapRef}
+          pointerEvents="none"
+          style={{
+            transform: `translate(${view.tx}px, ${view.ty}px)`,
+            transition: smooth && !reduced ? "transform 0.7s cubic-bezier(0.2,0.7,0.2,1)" : "none",
+          }}
+        >
           {LABELS.map((l) => (
             <g
               key={l.name}
-              transform={`translate(${l.x * view.k + view.tx}, ${l.y * view.k + view.ty})`}
+              transform={`translate(${l.x * view.k}, ${l.y * view.k})`}
               style={{
                 transition: smooth && !reduced ? "transform 0.7s cubic-bezier(0.2,0.7,0.2,1)" : "none",
               }}
@@ -1010,7 +1057,7 @@ export default memo(function WorldMap({
           {/* nombre de la placa seleccionada */}
           {showPlates && plateSel !== null && PLATE_DS[plateSel] && (
             <g
-              transform={`translate(${PLATE_DS[plateSel].lx * view.k + view.tx}, ${PLATE_DS[plateSel].ly * view.k + view.ty})`}
+              transform={`translate(${PLATE_DS[plateSel].lx * view.k}, ${PLATE_DS[plateSel].ly * view.k})`}
               style={{
                 transition: smooth && !reduced ? "transform 0.7s cubic-bezier(0.2,0.7,0.2,1)" : "none",
               }}

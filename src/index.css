@@ -255,3 +255,9 @@ input[type="range"].mag-slider::-moz-range-thumb {
   .rv { opacity: 1; transform: none; transition: none; }
   .bar-grow, .bar-grow-v { transform: none; transition: none; }
 }
+
+/* al arrastrar/encuadrar el mapa se pausan las animaciones para recortar pintado */
+.map-stage.is-dragging .ring-pulse,
+.map-stage.is-dragging .spin-slow {
+  animation-play-state: paused;
+}
