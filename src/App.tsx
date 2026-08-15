@@ -295,6 +295,13 @@ export default function App() {
     [liveQuakes, minMag, depth, area]
   );
 
+  const modeCount =
+    mapMode === "live"
+      ? filteredLive.length
+      : mapMode === "both"
+        ? filtered.length + filteredLive.length
+        : filtered.length;
+
   const selectMapMode = useCallback((m: MapMode) => {
     if (m === "live") {
       setRegion("Todas");
@@ -383,7 +390,7 @@ export default function App() {
     area ? "zona" : null,
   ];
   const caption = captionParts.some(Boolean)
-    ? `${captionParts.filter(Boolean).join(" · ")} · ${mapMode === "live" ? filteredLive.length : filtered.length} EVENTOS`
+    ? `${captionParts.filter(Boolean).join(" · ")} · ${modeCount} EVENTOS`
     : null;
 
   const renderFilters = useCallback(
@@ -497,7 +504,7 @@ export default function App() {
           </div>
           <div className="flex items-center justify-between gap-2 sm:justify-start">
             <span className="border border-line bg-panel px-2.5 py-1.5 font-mono text-[10px] tracking-widest text-jade sm:text-[11px]">
-              {filtered.length} EVENTOS
+              {modeCount} EVENTOS
             </span>
             <button
               onClick={refreshLive}
