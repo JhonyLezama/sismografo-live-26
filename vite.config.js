@@ -12,4 +12,14 @@ export default defineConfig({
       port: 3000,
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ["react", "react-dom"],
+          motion: ["framer-motion"],
+        },
+      },
+    },
+  },
 });

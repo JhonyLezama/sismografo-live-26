@@ -1,19 +1,25 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Region, Quake } from "./data/quakes";
 import { QUAKES, ANNUAL, fmt, MONTHS_ES, magColor, depthClass } from "./data/quakes";
-import WorldMap, { type MapMode, type AreaRect } from "./components/WorldMap";
-import SidePanel, { LiveDetail, LiveList, Detail } from "./components/SidePanel";
+import type { MapMode, AreaRect } from "./components/WorldMap";
 import BottomSheet from "./components/BottomSheet";
 import { fetchLiveQuakes, timeAgo, feedUrl, loadLiveCache, USGS_WINDOWS } from "./data/usgs";
 import type { LiveQuake, LiveWindow } from "./data/usgs";
 import { downloadLiveCSV, downloadQuakesCSV, downloadQuakesGeoJSON } from "./data/export";
-import Registry from "./components/Registry";
-import MagnitudeLab from "./components/MagnitudeLab";
-import Balance from "./components/Balance";
 import Ticker from "./components/Ticker";
 import Seismograph from "./components/Seismograph";
 import YearPlayer from "./components/YearPlayer";
 import { useScramble, useUtcClock, useReveal, usePrefersReducedMotion, useMediaQuery } from "./hooks";
+
+/* secciones pesadas cargadas bajo demanda (código dividido por chunks) */
+const WorldMap = lazy(() => import("./components/WorldMap"));
+const SidePanel = lazy(() => import("./components/SidePanel"));
+const LiveDetail = lazy(() => import("./components/SidePanel").then((m) => ({ default: m.LiveDetail })));
+const LiveList = lazy(() => import("./components/SidePanel").then((m) => ({ default: m.LiveList })));
+const Detail = lazy(() => import("./components/SidePanel").then((m) => ({ default: m.Detail })));
+const Registry = lazy(() => import("./components/Registry"));
+const MagnitudeLab = lazy(() => import("./components/MagnitudeLab"));
+const Balance = lazy(() => import("./components/Balance"));
 
 const REGIONS: ("Todas" | Region)[] = [
   "Todas", "Sudamérica", "Norteamérica", "Asia", "Oceanía", "Europa", "África",
@@ -124,6 +130,45 @@ function SectionHead({ num, title, sub }: { num: string; title: string; sub: str
   );
 }
 
+/* reloj UTC aislado para que el tick por segundo no vuelva a renderizar toda la app */
+function Clock() {
+  return <span className="font-mono text-xs font-semibold tracking-widest text-amber">{useUtcClock()}</span>;
+}
+
+/* línea del titular con efecto de decodificación, aislada en su propio componente */
+function ScrambleLine({ text, className }: { text: string; className?: string }) {
+  const line = useScramble(text);
+  return <span className={className}>{line || "\u00A0"}</span>;
+}
+
+function MapSkeleton() {
+  return (
+    <div className="flex h-full w-full items-center justify-center border border-line bg-deep">
+      <div className="pulse-soft h-24 w-2/3 border border-line bg-deep" />
+    </div>
+  );
+}
+
+function SidePanelSkeleton() {
+  return (
+    <div className="space-y-2 p-4">
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <div key={i} className="pulse-soft h-9 border border-line bg-deep" style={{ animationDelay: `${i * 90}ms` }} />
+      ))}
+    </div>
+  );
+}
+
+function SectionSkeleton() {
+  return (
+    <div className="space-y-3">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="pulse-soft h-10 border border-line bg-deep" style={{ animationDelay: `${i * 100}ms` }} />
+      ))}
+    </div>
+  );
+}
+
 export default function App() {
   const urlInit = useMemo(readUrl, []);
   const [minMag, setMinMag] = useState(urlInit.minMag);
@@ -166,7 +211,7 @@ export default function App() {
     return () => window.clearInterval(id);
   }, [timePlay, mapMode]);
 
-  const refreshLive = () => {
+  const refreshLive = useCallback(() => {
     setLiveStatus("loading");
     fetchLiveQuakes(liveWindow)
       .then(({ quakes, updated, stale }) => {
@@ -188,7 +233,7 @@ export default function App() {
         setLiveStatus("ok");
       })
       .catch(() => setLiveStatus("error"));
-  };
+  }, [liveWindow]);
 
   useEffect(() => {
     refreshLive();
@@ -205,13 +250,10 @@ export default function App() {
     }
   }, [soundOn]);
 
-  const clock = useUtcClock();
   const reduced = usePrefersReducedMotion();
   const isMobile = useMediaQuery("(max-width: 1023px)");
   const mapSecRef = useRef<HTMLDivElement | null>(null);
 
-  const line1 = useScramble("LA TIERRA TEMBLÓ");
-  const line2 = useScramble("8.462 VECES");
   const introRef = useReveal<HTMLDivElement>();
   const dashRef = useReveal<HTMLDivElement>();
   const regRef = useReveal<HTMLDivElement>();
@@ -251,13 +293,23 @@ export default function App() {
     [liveQuakes, minMag, depth, area]
   );
 
-  const selectMapMode = (m: MapMode) => {
+  const selectMapMode = useCallback((m: MapMode) => {
     if (m === "live") {
       setRegion("Todas");
       setMonth(-1);
     }
     setMapMode(m);
-  };
+  }, []);
+
+  const onSelect = useCallback((id: string | null) => {
+    setSelectedId(id);
+    if (id) setLiveSel(null);
+  }, []);
+
+  const onSelectLive = useCallback((id: string | null) => {
+    setLiveSel(id);
+    if (id) setSelectedId(null);
+  }, []);
 
   const togglePlayer = () => {
     if (timePlay) setTimePlay(false);
@@ -326,7 +378,8 @@ export default function App() {
     ? `${captionParts.filter(Boolean).join(" · ")} · ${mapMode === "live" ? filteredLive.length : filtered.length} EVENTOS`
     : null;
 
-  const renderFilters = (_compact: boolean) => {
+  const renderFilters = useCallback(
+    (_compact: boolean) => {
     const d = (v: string) => (_compact ? "" : v);
     return (
     <div className={`grid grid-cols-2 items-stretch gap-x-3 gap-y-3 ${d("md:grid-cols-12 md:items-center md:gap-3")}`}>
@@ -460,7 +513,12 @@ export default function App() {
       </div>
     </div>
     );
-  };
+    },
+    [minMag, region, month, depth, mapMode, liveStatus, filtered, filteredLive, refreshLive, selectMapMode]
+  );
+
+  /* barra de filtros dentro del mapa (identidad estable para memoizar WorldMap) */
+  const fullscreenBar = useMemo(() => renderFilters(true), [renderFilters]);
 
   return (
     <div className="relative min-h-screen">
@@ -493,7 +551,7 @@ export default function App() {
               <span className="blink-dot inline-block h-2 w-2 rounded-full bg-verm" />
               EN VIVO
             </span>
-            <span className="font-mono text-xs font-semibold tracking-widest text-amber">{clock}</span>
+            <span className="font-mono text-xs font-semibold tracking-widest text-amber"><Clock /></span>
             <button
               onClick={() => setMenuOpen((v) => !v)}
               aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
@@ -540,8 +598,8 @@ export default function App() {
               Temporada sísmica · {ANNUAL.period}
             </div>
             <h1 className="mt-5 font-display leading-[0.9] tracking-wide">
-              <span className="block text-[clamp(3rem,8.5vw,7.5rem)] text-bone">{line1 || " "}</span>
-              <span className="block text-[clamp(3rem,8.5vw,7.5rem)] text-verm">{line2 || " "}</span>
+              <ScrambleLine text="LA TIERRA TEMBLÓ" className="block text-[clamp(3rem,8.5vw,7.5rem)] text-bone" />
+              <ScrambleLine text="8.462 VECES" className="block text-[clamp(3rem,8.5vw,7.5rem)] text-verm" />
             </h1>
             <p className="mt-6 max-w-xl text-[15px] leading-relaxed text-fog">
               De la doble sacudida de <strong className="text-bone">Venezuela</strong> al megasismo de{" "}
@@ -694,38 +752,36 @@ export default function App() {
 
         <div className="grid grid-cols-1 gap-4 lg:h-[620px] lg:grid-cols-12">
           <div className="h-[65vh] min-h-[340px] max-h-[580px] sm:h-[500px] lg:col-span-7 lg:h-full">
-            <WorldMap
-              quakes={filtered}
-              selectedId={selectedId}
-              onSelect={(id) => {
-                setSelectedId(id);
-                if (id) setLiveSel(null);
-              }}
-              liveQuakes={filteredLive}
-              mode={mapMode}
-              liveSelectedId={liveSel}
-              onSelectLive={(id) => {
-                setLiveSel(id);
-                if (id) setSelectedId(null);
-              }}
-              caption={caption}
-              fullscreenBar={renderFilters(true)}
-              maxMonth={timeMonth}
-              areaFilter={area}
-              onAreaChange={setArea}
-            />
+            <Suspense fallback={<MapSkeleton />}>
+              <WorldMap
+                quakes={filtered}
+                selectedId={selectedId}
+                onSelect={onSelect}
+                liveQuakes={filteredLive}
+                mode={mapMode}
+                liveSelectedId={liveSel}
+                onSelectLive={onSelectLive}
+                caption={caption}
+                fullscreenBar={fullscreenBar}
+                maxMonth={timeMonth}
+                areaFilter={area}
+                onAreaChange={setArea}
+              />
+            </Suspense>
           </div>
           <div className="no-scrollbar h-[480px] min-h-0 overflow-y-auto lg:col-span-5 lg:h-full">
-            {liveSel && filteredLive.some((q) => q.id === liveSel) ? (
-              <LiveDetail
-                q={filteredLive.find((q) => q.id === liveSel)!}
-                onClose={() => setLiveSel(null)}
-              />
-            ) : mapMode === "live" ? (
-              <LiveList quakes={filteredLive} onSelect={setLiveSel} alertIds={new Set(liveAlerts.map((a) => a.id))} />
-            ) : (
-              <SidePanel quakes={visibleQuakes} selectedId={selectedId} onSelect={setSelectedId} />
-            )}
+            <Suspense fallback={<SidePanelSkeleton />}>
+              {liveSel && filteredLive.some((q) => q.id === liveSel) ? (
+                <LiveDetail
+                  q={filteredLive.find((q) => q.id === liveSel)!}
+                  onClose={() => setLiveSel(null)}
+                />
+              ) : mapMode === "live" ? (
+                <LiveList quakes={filteredLive} onSelect={setLiveSel} alertIds={new Set(liveAlerts.map((a) => a.id))} />
+              ) : (
+                <SidePanel quakes={visibleQuakes} selectedId={selectedId} onSelect={setSelectedId} />
+              )}
+            </Suspense>
           </div>
         </div>
 
@@ -737,11 +793,13 @@ export default function App() {
             setSelectedId(null);
           }}
         >
-          {sheetLive ? (
-            <LiveDetail q={sheetLive} onClose={() => setLiveSel(null)} />
-          ) : sheetLocal ? (
-            <Detail q={sheetLocal} onClose={() => setSelectedId(null)} />
-          ) : null}
+          <Suspense fallback={<div className="pulse-soft mx-4 mt-2 h-24 border border-line bg-deep" />}>
+            {sheetLive ? (
+              <LiveDetail q={sheetLive} onClose={() => setLiveSel(null)} />
+            ) : sheetLocal ? (
+              <Detail q={sheetLocal} onClose={() => setSelectedId(null)} />
+            ) : null}
+          </Suspense>
         </BottomSheet>
 
         {/* filtros en móvil */}
@@ -989,14 +1047,18 @@ export default function App() {
               {filtered.length} registros filtrados
             </span>
           </div>
-          <Registry quakes={filtered} onPick={pickFromTable} />
+          <Suspense fallback={<SectionSkeleton />}>
+            <Registry quakes={filtered} onPick={pickFromTable} />
+          </Suspense>
         </div>
       </section>
 
       {/* ---------- 03 escalas ---------- */}
       <section id="escalas" className="relative z-10 mx-auto max-w-[1400px] scroll-mt-24 px-4 py-12 sm:px-6">
         <div ref={labRef} className="rv">
-          <MagnitudeLab />
+          <Suspense fallback={<SectionSkeleton />}>
+            <MagnitudeLab />
+          </Suspense>
         </div>
       </section>
 
@@ -1008,7 +1070,9 @@ export default function App() {
           sub="Contadores del año, ritmo mensual de sismos mayores y víctimas, y el impacto económico preliminar reportado hasta el 15 de agosto."
         />
         <div ref={balRef} className="rv">
-          <Balance />
+          <Suspense fallback={<SectionSkeleton />}>
+            <Balance />
+          </Suspense>
         </div>
       </section>
 

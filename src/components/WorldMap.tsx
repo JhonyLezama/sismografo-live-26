@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { geoNaturalEarth1, geoPath, geoGraticule10 } from "d3-geo";
 import { feature, mesh } from "topojson-client";
@@ -356,7 +356,7 @@ function SelectionSummary({
   );
 }
 
-export default function WorldMap({
+export default memo(function WorldMap({
   quakes,
   selectedId,
   onSelect,
@@ -779,14 +779,8 @@ export default function WorldMap({
                 const sel = i === plateSel;
                 const dim = plateSel !== null && !sel;
                 return (
-                  <path
+                  <g
                     key={p.name + i}
-                    d={p.d}
-                    fill="none"
-                    stroke={sel ? "#f59e42" : "#e23a62"}
-                    strokeWidth={sel ? 1.8 : plateHover === i ? 1.2 : 0.7}
-                    opacity={dim ? 0.12 : sel ? 0.95 : plateHover === i ? 0.85 : 0.4}
-                    vectorEffect="non-scaling-stroke"
                     className="marker-dot"
                     onMouseEnter={() => setPlateHover(i)}
                     onMouseLeave={() => setPlateHover(null)}
@@ -795,7 +789,17 @@ export default function WorldMap({
                       if (selectMode) return;
                       if (!movedRef.current) setPlateSel(sel ? null : i);
                     }}
-                  />
+                  >
+                    <path d={p.d} fill="none" stroke="transparent" strokeWidth={10 / view.k} style={{ pointerEvents: "stroke" }} aria-hidden />
+                    <path
+                      d={p.d}
+                      fill="none"
+                      stroke={sel ? "#f59e42" : "#e23a62"}
+                      strokeWidth={sel ? 1.8 : plateHover === i ? 1.2 : 0.7}
+                      opacity={dim ? 0.12 : sel ? 0.95 : plateHover === i ? 0.85 : 0.4}
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  </g>
                 );
               })}
             </g>
@@ -858,6 +862,7 @@ export default function WorldMap({
                 onMouseEnter={() => setHoverId(q.id)}
                 onMouseLeave={() => setHoverId(null)}
               >
+                <circle r={Math.max(r, 12 / view.k)} fill="transparent" aria-hidden />
                 {q.mag >= 7.2 && !dim && (
                   <circle r={r * 1.15} fill="none" stroke={c} strokeWidth={1.4} className="ring-pulse" />
                 )}
@@ -911,6 +916,7 @@ export default function WorldMap({
                   onMouseEnter={() => setHoverLiveId(q.id)}
                   onMouseLeave={() => setHoverLiveId(null)}
                 >
+                  <circle r={Math.max(r, 12 / view.k)} fill="transparent" aria-hidden />
                   {sel && (
                     <circle
                       r={r * 2.1}
@@ -1374,4 +1380,4 @@ export default function WorldMap({
       )}
     </div>
   );
-}
+});
