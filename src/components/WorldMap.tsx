@@ -384,6 +384,7 @@ export default memo(function WorldMap({
   const [plateHover, setPlateHover] = useState<number | null>(null);
   const [barPos, setBarPos] = useState<{ x: number; y: number } | null>(null);
   const [fullFilterOpen, setFullFilterOpen] = useState(false);
+  const [barCollapsed, setBarCollapsed] = useState(false);
   const barRef = useRef<HTMLDivElement | null>(null);
   const barContentRef = useRef<HTMLDivElement | null>(null);
   const barDragRef = useRef<{ sx: number; sy: number; x: number; y: number } | null>(null);
@@ -484,6 +485,7 @@ export default memo(function WorldMap({
   useEffect(() => {
     setBarPos(null);
     setFullFilterOpen(false);
+    setBarCollapsed(false);
   }, [isFullscreen]);
 
   const onBarPointerDown = (e: React.PointerEvent) => {
@@ -1330,30 +1332,62 @@ export default memo(function WorldMap({
             )}
           </div>
 
-          {/* escritorio: barra arrastrable */}
+          {/* escritorio: barra arrastrable colapsable */}
           <div
             ref={barRef}
-            className={`absolute z-30 hidden w-max max-w-[calc(100%-1rem)] border border-line bg-abyss/95 p-2 shadow-xl shadow-black/50 backdrop-blur-sm sm:block ${
-              barPos ? "" : "left-1/2 top-16 -translate-x-1/2"
-            }`}
+            className={`absolute z-30 hidden w-max max-w-[calc(100%-1rem)] border border-line bg-abyss/95 shadow-xl shadow-black/50 backdrop-blur-sm sm:block ${
+              barCollapsed ? "p-1.5" : "p-2"
+            } ${barPos ? "" : "left-1/2 top-16 -translate-x-1/2"}`}
             style={barPos ? { left: barPos.x, top: barPos.y } : undefined}
             onPointerDown={onBarPointerDown}
             onPointerMove={onBarPointerMove}
             onPointerUp={onBarPointerUp}
           >
-          <div
-            className="mb-1.5 flex cursor-grab touch-none select-none items-center gap-2 border-b border-line/60 pb-1.5 active:cursor-grabbing"
-            title="Arrastra para mover"
-            aria-label="Mover barra de filtros"
-          >
-            <span className="flex gap-0.5">
-              {[0, 1, 2, 3, 4].map((i) => (
-                <span key={i} className="h-[2px] w-2 bg-fog/40" />
-              ))}
-            </span>
-            <span className="font-mono text-[9px] tracking-[0.2em] text-dim uppercase">Filtros · arrastra</span>
-          </div>
-          <div ref={barContentRef} className="max-h-[calc(100vh-9rem)] overflow-y-auto">{fullscreenBar}</div>
+            <div
+              className={`flex cursor-grab touch-none select-none items-center gap-2 active:cursor-grabbing ${
+                barCollapsed ? "" : "mb-1.5 border-b border-line/60 pb-1.5"
+              }`}
+              title="Arrastra para mover"
+              aria-label="Mover barra de filtros"
+            >
+              <span className="flex gap-0.5">
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <span key={i} className="h-[2px] w-2 bg-fog/40" />
+                ))}
+              </span>
+              <span className="font-mono text-[9px] tracking-[0.2em] text-dim uppercase">Filtros</span>
+              {barCollapsed && caption && (
+                <span className="border border-amber/40 bg-amber/10 px-1.5 py-0.5 font-mono text-[9px] tracking-wider text-amber">
+                  {caption}
+                </span>
+              )}
+              <button
+                onClick={() => setBarCollapsed((v) => !v)}
+                aria-expanded={!barCollapsed}
+                aria-label={barCollapsed ? "Mostrar filtros" : "Ocultar filtros"}
+                title={barCollapsed ? "Mostrar filtros" : "Ocultar filtros"}
+                className="chip-btn grid h-6 w-6 shrink-0 place-items-center border border-line text-dim hover:border-amber hover:text-amber"
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className={barCollapsed ? "" : "rotate-180"}
+                >
+                  <path d="M3 6l5 5 5-5" />
+                </svg>
+              </button>
+            </div>
+            {!barCollapsed && (
+              <div id="fs-filters-content" ref={barContentRef} className="max-h-[calc(100vh-9rem)] overflow-y-auto">
+                {fullscreenBar}
+              </div>
+            )}
           </div>
         </>
       )}
