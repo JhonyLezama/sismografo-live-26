@@ -459,8 +459,8 @@ export default function App() {
       {/* Capa + contador + refresco */}
       <div className={`col-span-2 flex flex-col gap-1.5 ${d("md:col-span-12 lg:col-span-5 md:flex-row md:items-center md:gap-3")}`}>
         <span className="font-mono text-[10px] tracking-[0.2em] text-dim uppercase md:hidden">Capa</span>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex min-w-[170px] flex-1 overflow-hidden border border-line" role="group" aria-label="Capa de datos del mapa">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
+          <div className="grid w-full grid-cols-3 overflow-hidden border border-line sm:flex sm:w-auto sm:min-w-[170px] sm:flex-1" role="group" aria-label="Capa de datos del mapa">
             {[
               { m: "local", l: "2026 · Local" },
               { m: "live", l: "USGS · En vivo" },
@@ -495,28 +495,30 @@ export default function App() {
               </button>
             ))}
           </div>
-          <span className="border border-line bg-panel px-2.5 py-1.5 font-mono text-[10px] tracking-widest text-jade sm:text-[11px]">
-            {filtered.length} EVENTOS
-          </span>
-          <button
-            onClick={refreshLive}
-            aria-label="Actualizar datos del USGS"
-            title="Actualizar datos del USGS"
-            className="chip-btn grid h-[30px] w-[30px] shrink-0 place-items-center border border-line bg-panel text-fog hover:border-teal hover:text-teal"
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              className={liveStatus === "loading" ? "animate-spin" : ""}
+          <div className="flex items-center justify-between gap-2 sm:justify-start">
+            <span className="border border-line bg-panel px-2.5 py-1.5 font-mono text-[10px] tracking-widest text-jade sm:text-[11px]">
+              {filtered.length} EVENTOS
+            </span>
+            <button
+              onClick={refreshLive}
+              aria-label="Actualizar datos del USGS"
+              title="Actualizar datos del USGS"
+              className="chip-btn grid h-[30px] w-[30px] shrink-0 place-items-center border border-line bg-panel text-fog hover:border-teal hover:text-teal"
             >
-              <path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.5v3h-3" />
-            </svg>
-          </button>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                className={liveStatus === "loading" ? "animate-spin" : ""}
+              >
+                <path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.5v3h-3" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>
