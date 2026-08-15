@@ -15,8 +15,46 @@ export interface LiveQuake {
   url: string;
 }
 
-export const USGS_FEED_URL =
-  "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_month.geojson";
+export type LiveWindow = "hour" | "day" | "week" | "month";
+
+export const USGS_WINDOWS: { key: LiveWindow; label: string; days: string }[] = [
+  { key: "hour", label: "1h", days: "1 hora" },
+  { key: "day", label: "24h", days: "24 h" },
+  { key: "week", label: "7d", days: "7 días" },
+  { key: "month", label: "30d", days: "30 días" },
+];
+
+export function feedUrl(w: LiveWindow): string {
+  return `https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_${w}.geojson`;
+}
+
+const CACHE_KEY = (w: LiveWindow) => `sismografo-usgs-v1-${w}`;
+
+interface LiveCache {
+  quakes: LiveQuake[];
+  savedAt: number;
+}
+
+export function loadLiveCache(w: LiveWindow): LiveCache | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY(w));
+    if (!raw) return null;
+    const data = JSON.parse(raw) as Partial<LiveCache>;
+    if (!Array.isArray(data.quakes) || typeof data.savedAt !== "number") return null;
+    if (!data.quakes.every((q) => q && typeof q.id === "string" && typeof q.mag === "number")) return null;
+    return { quakes: data.quakes, savedAt: data.savedAt };
+  } catch {
+    return null;
+  }
+}
+
+function saveLiveCache(w: LiveWindow, quakes: LiveQuake[]) {
+  try {
+    localStorage.setItem(CACHE_KEY(w), JSON.stringify({ quakes, savedAt: Date.now() }));
+  } catch {
+    /* cuota llena o modo privado: se ignora */
+  }
+}
 
 interface UsgsFeature {
   id: string;
@@ -31,35 +69,43 @@ interface UsgsFeature {
   geometry: { coordinates: [number, number, number] };
 }
 
-export async function fetchLiveQuakes(): Promise<{
+export async function fetchLiveQuakes(w: LiveWindow): Promise<{
   quakes: LiveQuake[];
   updated: number;
+  stale: boolean;
 }> {
-  const res = await fetch(USGS_FEED_URL, { headers: { Accept: "application/json" } });
-  if (!res.ok) throw new Error(`USGS respondió HTTP ${res.status}`);
-  const gj = (await res.json()) as { features?: UsgsFeature[] };
-  const quakes: LiveQuake[] = (gj.features ?? [])
-    .filter((f) => f.geometry?.coordinates && f.properties?.mag !== null)
-    .map((f) => {
-      const [lon, lat, depth] = f.geometry.coordinates;
-      const place = f.properties.place ?? "Ubicación sin nombre";
-      const parts = place.split(",").map((s) => s.trim());
-      return {
-        id: f.id,
-        mag: f.properties.mag ?? 0,
-        place,
-        country: parts.length > 1 ? parts[parts.length - 1] : "—",
-        lat,
-        lon,
-        depth: Math.round(depth ?? 0),
-        time: f.properties.time,
-        tsunami: f.properties.tsunami === 1,
-        sig: f.properties.sig ?? 0,
-        url: f.properties.url ?? "https://earthquake.usgs.gov/earthquakes/",
-      };
-    })
-    .sort((a, b) => b.time - a.time);
-  return { quakes, updated: Date.now() };
+  try {
+    const res = await fetch(feedUrl(w), { headers: { Accept: "application/json" } });
+    if (!res.ok) throw new Error(`USGS respondió HTTP ${res.status}`);
+    const gj = (await res.json()) as { features?: UsgsFeature[] };
+    const quakes: LiveQuake[] = (gj.features ?? [])
+      .filter((f) => f.geometry?.coordinates && f.properties?.mag !== null)
+      .map((f) => {
+        const [lon, lat, depth] = f.geometry.coordinates;
+        const place = f.properties.place ?? "Ubicación sin nombre";
+        const parts = place.split(",").map((s) => s.trim());
+        return {
+          id: f.id,
+          mag: f.properties.mag ?? 0,
+          place,
+          country: parts.length > 1 ? parts[parts.length - 1] : "—",
+          lat,
+          lon,
+          depth: Math.round(depth ?? 0),
+          time: f.properties.time,
+          tsunami: f.properties.tsunami === 1,
+          sig: f.properties.sig ?? 0,
+          url: f.properties.url ?? "https://earthquake.usgs.gov/earthquakes/",
+        };
+      })
+      .sort((a, b) => b.time - a.time);
+    saveLiveCache(w, quakes);
+    return { quakes, updated: Date.now(), stale: false };
+  } catch (err) {
+    const cached = loadLiveCache(w);
+    if (cached) return { quakes: cached.quakes, updated: cached.savedAt, stale: true };
+    throw err;
+  }
 }
 
 export function timeAgo(ts: number): string {

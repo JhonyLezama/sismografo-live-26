@@ -41,7 +41,7 @@ export default function MagnitudeLab() {
   const ampPct = Math.pow(10, m - 4) / Math.pow(10, 9.5 - 4);
 
   return (
-    <div className="grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+    <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
       {/* columna fija */}
       <div className="lg:sticky lg:top-24 lg:self-start">
         <div className="font-mono text-[11px] tracking-[0.24em] text-amber uppercase">03 · Cómo se mide</div>
@@ -87,9 +87,9 @@ export default function MagnitudeLab() {
                 { l: "Hiroshimas", v: hiro >= 100 ? fmt(Math.round(hiro)) : hiro.toLocaleString("es-ES", { maximumFractionDigits: 1 }) },
                 { l: "Amplitud", v: `×${fmt(Math.round(Math.pow(10, m - 4)))}` },
               ].map((s) => (
-                <div key={s.l} className="border border-line bg-abyss/60 px-3 py-2">
+                <div key={s.l} className="min-w-0 border border-line bg-abyss/60 px-2 py-2 sm:px-3">
                   <div className="font-mono text-[9px] tracking-[0.16em] text-dim uppercase">{s.l}</div>
-                  <div className="mt-0.5 font-mono text-sm font-semibold text-bone">{s.v}</div>
+                  <div className="mt-0.5 truncate font-mono text-sm font-semibold text-bone" title={s.v}>{s.v}</div>
                 </div>
               ))}
             </div>
@@ -152,19 +152,19 @@ export default function MagnitudeLab() {
               const count = QUAKES.filter((q) => q.mmi === row.g).length;
               const col = mmiColor(row.g);
               return (
-                <div key={row.g} className="group flex items-center gap-4 px-5 py-2.5 transition-colors hover:bg-raise/60">
+                <div key={row.g} className="group flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-2.5 transition-colors hover:bg-raise/60 sm:gap-x-4 sm:px-5">
                   <span
                     className="grid h-9 w-11 shrink-0 place-items-center border font-display text-lg"
                     style={{ color: col, borderColor: `${col}77`, background: `${col}12` }}
                   >
                     {row.g}
                   </span>
-                  <span className="w-32 shrink-0 text-sm font-semibold text-bone">{row.label}</span>
-                  <span className="min-w-0 flex-1 truncate text-xs text-fog transition-transform duration-200 group-hover:translate-x-1">
+                  <span className="w-24 shrink-0 truncate text-sm font-semibold text-bone sm:w-32">{row.label}</span>
+                  <span className="min-w-0 flex-1 basis-full truncate text-xs text-fog transition-transform duration-200 group-hover:translate-x-1 sm:basis-auto">
                     {row.desc}
                   </span>
                   {count > 0 && (
-                    <span className="shrink-0 border border-line px-2 py-0.5 font-mono text-[10px] tracking-wider text-fog">
+                    <span className="hidden shrink-0 border border-line px-2 py-0.5 font-mono text-[10px] tracking-wider text-fog sm:inline-flex">
                       {count} evento{count > 1 ? "s" : ""} 2026
                     </span>
                   )}

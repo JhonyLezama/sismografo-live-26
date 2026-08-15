@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Region, Quake } from "./data/quakes";
-import { QUAKES, ANNUAL, fmt, MONTHS_ES, magColor } from "./data/quakes";
-import WorldMap from "./components/WorldMap";
-import SidePanel, { LiveDetail } from "./components/SidePanel";
-import { fetchLiveQuakes, timeAgo, USGS_FEED_URL } from "./data/usgs";
-import type { LiveQuake } from "./data/usgs";
+import { QUAKES, ANNUAL, fmt, MONTHS_ES, magColor, depthClass } from "./data/quakes";
+import WorldMap, { type MapMode, type AreaRect } from "./components/WorldMap";
+import SidePanel, { LiveDetail, LiveList } from "./components/SidePanel";
+import { fetchLiveQuakes, timeAgo, feedUrl, loadLiveCache, USGS_WINDOWS } from "./data/usgs";
+import type { LiveQuake, LiveWindow } from "./data/usgs";
+import { downloadLiveCSV, downloadQuakesCSV, downloadQuakesGeoJSON } from "./data/export";
 import Registry from "./components/Registry";
 import MagnitudeLab from "./components/MagnitudeLab";
 import Balance from "./components/Balance";
 import Ticker from "./components/Ticker";
 import Seismograph from "./components/Seismograph";
+import YearPlayer from "./components/YearPlayer";
 import { useScramble, useUtcClock, useReveal, usePrefersReducedMotion } from "./hooks";
 
 const REGIONS: ("Todas" | Region)[] = [
@@ -21,6 +23,91 @@ const MAG_CHIPS = [
   { v: 6, l: "≥ 6.0" },
   { v: 7, l: "≥ 7.0" },
 ];
+
+type DepthFilter = "all" | "sup" | "int" | "deep";
+const DEPTH_CHIPS: { v: DepthFilter; l: string }[] = [
+  { v: "all", l: "Todas" },
+  { v: "sup", l: "Somero" },
+  { v: "int", l: "Intermedio" },
+  { v: "deep", l: "Profundo" },
+];
+const DEPTH_LABEL: Record<Exclude<DepthFilter, "all">, string> = {
+  sup: "Superficial",
+  int: "Intermedio",
+  deep: "Profundo",
+};
+
+const readUrl = () => {
+  const p = new URLSearchParams(window.location.search);
+  const mag = Number(p.get("mag"));
+  const m = Number(p.get("month"));
+  const region = p.get("region");
+  const modo = p.get("modo");
+  const prof = p.get("prof");
+  const zona = p.get("zona");
+  let area: AreaRect | null = null;
+  if (zona) {
+    const v = zona.split(",").map(Number);
+    if (v.length === 4 && v.every((n) => isFinite(n))) {
+      const [minLat, maxLat, minLon, maxLon] = v;
+      if (minLat >= -90 && maxLat <= 90 && minLat <= maxLat && minLon >= -180 && maxLon <= 180 && minLon <= maxLon) {
+        area = { minLat, maxLat, minLon, maxLon };
+      }
+    }
+  }
+  return {
+    minMag: MAG_CHIPS.some((c) => c.v === mag) ? mag : 0,
+    region: (REGIONS as readonly string[]).includes(region ?? "")
+      ? (region as (typeof REGIONS)[number])
+      : "Todas",
+    month: m >= -1 && m <= 7 ? m : -1,
+    mapMode: (modo === "live" || modo === "both" || modo === "local" ? modo : "local") as MapMode,
+    depth: (prof === "sup" || prof === "int" || prof === "deep" ? prof : "all") as DepthFilter,
+    area,
+  };
+};
+
+const NAV: [string, string][] = [
+  ["#mapa", "Mapa"],
+  ["#en-vivo", "En vivo"],
+  ["#registro", "Registro"],
+  ["#escalas", "Escalas"],
+  ["#balance", "Balance"],
+];
+
+/* alerta sonora para sismos grandes (Web Audio, sin archivos) */
+let audioCtx: AudioContext | null = null;
+function playAlertSound(quakes: LiveQuake[]) {
+  const maxM = Math.max(...quakes.map((q) => q.mag));
+  try {
+    audioCtx = audioCtx ?? new window.AudioContext();
+    if (audioCtx.state === "suspended") void audioCtx.resume();
+    const now = audioCtx.currentTime;
+    const tone = (freq: number, start: number, dur: number, gainV = 0.22) => {
+      const osc = audioCtx!.createOscillator();
+      const g = audioCtx!.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, now + start);
+      g.gain.exponentialRampToValueAtTime(gainV, now + start + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + start + dur);
+      osc.connect(g);
+      g.connect(audioCtx!.destination);
+      osc.start(now + start);
+      osc.stop(now + start + dur + 0.05);
+    };
+    if (maxM >= 7) {
+      tone(659, 0, 0.28, 0.28);
+      tone(659, 0.3, 0.28, 0.28);
+      tone(880, 0.6, 0.45, 0.32);
+    } else {
+      tone(880, 0, 0.18, 0.22);
+      tone(1174, 0.2, 0.28, 0.22);
+    }
+  } catch {
+    /* audio bloqueado por el navegador: se ignora */
+  }
+}
 
 function SectionHead({ num, title, sub }: { num: string; title: string; sub: string }) {
   const ref = useReveal<HTMLDivElement>();
@@ -36,24 +123,65 @@ function SectionHead({ num, title, sub }: { num: string; title: string; sub: str
 }
 
 export default function App() {
-  const [minMag, setMinMag] = useState(0);
-  const [region, setRegion] = useState<(typeof REGIONS)[number]>("Todas");
-  const [month, setMonth] = useState(-1);
+  const urlInit = useMemo(readUrl, []);
+  const [minMag, setMinMag] = useState(urlInit.minMag);
+  const [region, setRegion] = useState<(typeof REGIONS)[number]>(urlInit.region);
+  const [month, setMonth] = useState(urlInit.month);
+  const [depth, setDepth] = useState<DepthFilter>(urlInit.depth);
+  const [area, setArea] = useState<AreaRect | null>(urlInit.area ?? null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  /* capa EN VIVO — API gratuita del USGS */
-  const [liveQuakes, setLiveQuakes] = useState<LiveQuake[]>([]);
-  const [liveUpdated, setLiveUpdated] = useState<number | null>(null);
+  /* reproductor temporal del año */
+  const [timePlay, setTimePlay] = useState(false);
+  const [timeMonth, setTimeMonth] = useState(-1);
+
+  useEffect(() => {
+    if (timePlay && timeMonth >= 7) {
+      setTimePlay(false);
+      setTimeMonth(-1);
+    }
+  }, [timePlay, timeMonth]);
+
+  /* capa EN VIVO — API gratuita del USGS (con caché en localStorage) */
+  const [liveQuakes, setLiveQuakes] = useState<LiveQuake[]>(() => loadLiveCache("month")?.quakes ?? []);
+  const [liveUpdated, setLiveUpdated] = useState<number | null>(() => loadLiveCache("month")?.savedAt ?? null);
+  const [liveStale, setLiveStale] = useState(false);
   const [liveStatus, setLiveStatus] = useState<"loading" | "ok" | "error">("loading");
-  const [showLive, setShowLive] = useState(true);
+  const [liveWindow, setLiveWindow] = useState<LiveWindow>("month");
+  const [liveAlerts, setLiveAlerts] = useState<LiveQuake[]>([]);
+  const [soundOn, setSoundOn] = useState<boolean>(() => localStorage.getItem("sismografo-sound") === "1");
+  const knownIdsRef = useRef<Set<string> | null>(null);
+  const soundOnRef = useRef(soundOn);
+  soundOnRef.current = soundOn;
+  const [mapMode, setMapMode] = useState<MapMode>(urlInit.mapMode);
   const [liveSel, setLiveSel] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!timePlay || mapMode === "live") return;
+    const id = window.setInterval(() => setTimeMonth((m) => (m >= 7 ? m : m + 1)), 1000);
+    return () => window.clearInterval(id);
+  }, [timePlay, mapMode]);
 
   const refreshLive = () => {
     setLiveStatus("loading");
-    fetchLiveQuakes()
-      .then(({ quakes, updated }) => {
+    fetchLiveQuakes(liveWindow)
+      .then(({ quakes, updated, stale }) => {
+        const prev = knownIdsRef.current;
+        const isFirst = prev === null;
+        knownIdsRef.current = new Set(quakes.map((q) => q.id));
+        let fresh: LiveQuake[] = [];
+        if (!isFirst && !stale) {
+          fresh = quakes.filter((q) => q.mag >= 6 && !prev.has(q.id));
+          if (fresh.length > 0) {
+            const ids = new Set(fresh.map((q) => q.id));
+            setLiveAlerts((cur) => [...fresh, ...cur.filter((a) => !ids.has(a.id))]);
+            if (soundOnRef.current) playAlertSound(fresh);
+          }
+        }
         setLiveQuakes(quakes);
         setLiveUpdated(updated);
+        setLiveStale(!!stale);
         setLiveStatus("ok");
       })
       .catch(() => setLiveStatus("error"));
@@ -63,7 +191,16 @@ export default function App() {
     refreshLive();
     const id = window.setInterval(refreshLive, 5 * 60 * 1000);
     return () => window.clearInterval(id);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveWindow]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("sismografo-sound", soundOn ? "1" : "0");
+    } catch {
+      /* cuota llena o modo privado: se ignora */
+    }
+  }, [soundOn]);
 
   const clock = useUtcClock();
   const reduced = usePrefersReducedMotion();
@@ -83,12 +220,48 @@ export default function App() {
         (q) =>
           q.mag >= minMag &&
           (region === "Todas" || q.region === region) &&
-          (month < 0 || Number(q.date.slice(5, 7)) - 1 === month)
+          (month < 0 || Number(q.date.slice(5, 7)) - 1 === month) &&
+          (depth === "all" || depthClass(q.depth).label === DEPTH_LABEL[depth]) &&
+          (!area || (q.lat >= area.minLat && q.lat <= area.maxLat && q.lon >= area.minLon && q.lon <= area.maxLon))
       ),
-    [minMag, region, month]
+    [minMag, region, month, depth, area]
   );
 
-  useEffect(() => setSelectedId(null), [minMag, region, month]);
+  const visibleQuakes = useMemo(
+    () =>
+      timeMonth >= 0
+        ? filtered.filter((q) => Number(q.date.slice(5, 7)) - 1 <= timeMonth)
+        : filtered,
+    [filtered, timeMonth]
+  );
+
+  const togglePlayer = () => {
+    if (timePlay) setTimePlay(false);
+    else {
+      if (timeMonth < 0) setTimeMonth(0);
+      setTimePlay(true);
+    }
+  };
+
+  const resetPlayer = () => {
+    setTimePlay(false);
+    setTimeMonth(-1);
+  };
+
+  useEffect(() => setSelectedId(null), [minMag, region, month, depth, area]);
+
+  /* filtros compartibles por URL */
+  useEffect(() => {
+    const p = new URLSearchParams();
+    if (minMag !== 0) p.set("mag", String(minMag));
+    if (region !== "Todas") p.set("region", region);
+    if (month >= 0) p.set("month", String(month));
+    if (mapMode !== "local") p.set("modo", mapMode);
+    if (depth !== "all") p.set("prof", depth);
+    if (area) p.set("zona", `${area.minLat},${area.maxLat},${area.minLon},${area.maxLon}`);
+    const qs = p.toString();
+    window.history.replaceState(null, "", qs ? `${window.location.pathname}?${qs}` : window.location.pathname);
+  }, [minMag, region, month, mapMode, depth, area]);
 
   const pickFromTable = (q: Quake) => {
     setSelectedId(q.id);
@@ -97,6 +270,137 @@ export default function App() {
       block: "center",
     });
   };
+
+  const liveMax = liveQuakes.reduce((m, q) => Math.max(m, q.mag), 0);
+  const liveCountries = new Set(liveQuakes.map((q) => q.country)).size;
+  const liveTsunami = liveQuakes.filter((q) => q.tsunami).length;
+  const latest = liveQuakes[0];
+
+  const captionParts = [
+    region !== "Todas" ? region : null,
+    minMag > 0 ? `M≥${minMag}` : null,
+    month >= 0 ? MONTHS_ES[month] : null,
+    depth !== "all" ? DEPTH_LABEL[depth] : null,
+    area ? "zona" : null,
+  ];
+  const caption = captionParts.some(Boolean)
+    ? `${captionParts.filter(Boolean).join(" · ")} · ${filtered.length} EVENTOS`
+    : null;
+
+  const renderFilters = (compact: boolean) => (
+    <div className="flex flex-wrap items-center gap-3">
+      <span className="font-mono text-[10px] tracking-[0.2em] text-dim uppercase">Magnitud</span>
+      <div className="flex overflow-hidden border border-line">
+        {MAG_CHIPS.map((c) => (
+          <button
+            key={c.v}
+            onClick={() => setMinMag(c.v)}
+            className={`chip-btn px-1.5 py-1.5 font-mono text-[10px] sm:px-3.5 sm:text-xs ${
+              minMag === c.v ? "bg-amber text-abyss" : "bg-panel text-fog hover:text-bone"
+            }`}
+          >
+            {c.l}
+          </button>
+        ))}
+      </div>
+      <span className="ml-2 font-mono text-[10px] tracking-[0.2em] text-dim uppercase">Región</span>
+      <select
+        value={region}
+        onChange={(e) => setRegion(e.target.value as (typeof REGIONS)[number])}
+        className="chip-btn border border-line bg-panel px-3 py-1.5 font-mono text-xs text-bone outline-none hover:border-fog"
+      >
+        {REGIONS.map((r) => (
+          <option key={r} value={r}>{r}</option>
+        ))}
+      </select>
+      <span className="ml-2 font-mono text-[10px] tracking-[0.2em] text-dim uppercase">Mes</span>
+      <select
+        value={month}
+        onChange={(e) => setMonth(Number(e.target.value))}
+        className="chip-btn border border-line bg-panel px-3 py-1.5 font-mono text-xs text-bone outline-none hover:border-fog"
+      >
+        <option value={-1}>Todo el año</option>
+        {MONTHS_ES.slice(0, 8).map((m, i) => (
+          <option key={m} value={i}>{m}</option>
+        ))}
+      </select>
+      <span className="ml-2 font-mono text-[10px] tracking-[0.2em] text-dim uppercase">Profundidad</span>
+      <div className="flex overflow-hidden border border-line">
+        {DEPTH_CHIPS.map((c) => (
+          <button
+            key={c.v}
+            onClick={() => setDepth(c.v)}
+            className={`chip-btn px-1.5 py-1.5 font-mono text-[10px] sm:px-3 sm:text-xs ${
+              depth === c.v ? "bg-amber text-abyss" : "bg-panel text-fog hover:text-bone"
+            }`}
+          >
+            {c.l}
+          </button>
+        ))}
+      </div>
+      <span
+        className={`border border-line bg-panel px-3 py-1.5 font-mono text-[11px] tracking-widest text-jade ${
+          compact ? "ml-0" : "ml-auto"
+        }`}
+      >
+        {filtered.length} EVENTOS
+      </span>
+      <div className="flex overflow-hidden border border-line" role="group" aria-label="Capa de datos del mapa">
+        {[
+          { m: "local", l: "2026 · Local" },
+          { m: "live", l: "USGS · En vivo" },
+          { m: "both", l: "Ambos" },
+        ].map((o) => (
+          <button
+            key={o.m}
+            onClick={() => setMapMode(o.m as MapMode)}
+            aria-pressed={mapMode === o.m}
+            title={
+              o.m === "local"
+                ? "Catálogo 2026 con datos locales"
+                : o.m === "live"
+                  ? "Sismos reales del USGS (últimos 30 días)"
+                  : "Ambas capas superpuestas"
+            }
+            className={`chip-btn px-1.5 py-1.5 font-mono text-[10px] uppercase transition-colors sm:px-3 sm:text-[11px] ${
+              mapMode === o.m
+                ? "bg-amber text-abyss"
+                : "bg-panel text-fog hover:text-bone"
+            }`}
+          >
+            <span className="sm:hidden">
+              {o.m === "live" ? "En vivo" : o.m === "local" ? "Local" : "Ambos"}
+            </span>
+            <span className="hidden sm:inline">{o.l}</span>
+            {o.m !== "local" && (
+              <span className="ml-1.5 opacity-80">
+                · {liveStatus === "loading" ? "···" : liveQuakes.length}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+      <button
+        onClick={refreshLive}
+        aria-label="Actualizar datos del USGS"
+        title="Actualizar datos del USGS"
+        className="chip-btn grid h-[30px] w-[30px] place-items-center border border-line bg-panel text-fog hover:border-teal hover:text-teal"
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          className={liveStatus === "loading" ? "animate-spin" : ""}
+        >
+          <path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.5v3h-3" />
+        </svg>
+      </button>
+    </div>
+  );
 
   return (
     <div className="relative min-h-screen">
@@ -118,7 +422,7 @@ export default function App() {
             </span>
           </a>
           <nav className="hidden items-center gap-5 font-mono text-[11px] tracking-[0.16em] text-fog uppercase md:flex">
-            {[["#mapa", "Mapa"], ["#en-vivo", "En vivo"], ["#registro", "Registro"], ["#escalas", "Escalas"], ["#balance", "Balance"]].map(([h, l]) => (
+            {NAV.map(([h, l]) => (
               <a key={h} href={h} className="chip-btn border-b border-transparent pb-0.5 hover:border-amber hover:text-amber">
                 {l}
               </a>
@@ -130,8 +434,39 @@ export default function App() {
               EN VIVO
             </span>
             <span className="font-mono text-xs font-semibold tracking-widest text-amber">{clock}</span>
+            <button
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
+              aria-expanded={menuOpen}
+              className="chip-btn grid h-9 w-9 place-items-center border border-line bg-panel text-fog hover:border-amber hover:text-amber md:hidden"
+            >
+              {menuOpen ? (
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                  <path d="M3 3l10 10M13 3L3 13" />
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                  <path d="M2 4h12M2 8h12M2 12h12" />
+                </svg>
+              )}
+            </button>
           </div>
         </div>
+
+        {menuOpen && (
+          <nav className="border-t border-line bg-abyss/95 backdrop-blur-sm md:hidden">
+            {NAV.map(([h, l]) => (
+              <a
+                key={h}
+                href={h}
+                onClick={() => setMenuOpen(false)}
+                className="chip-btn block border-b border-line/60 px-5 py-3.5 font-mono text-[11px] tracking-[0.18em] text-fog uppercase hover:text-amber"
+              >
+                {l}
+              </a>
+            ))}
+          </nav>
+        )}
       </header>
 
       <Ticker quakes={QUAKES} />
@@ -175,25 +510,77 @@ export default function App() {
                 <span className="font-mono text-[10px] tracking-[0.24em] text-dim uppercase">Ficha del periodo</span>
                 <span className="drift-y font-mono text-[10px] tracking-widest text-jade">▲ 28 DESTACADOS</span>
               </div>
-              <dl className="divide-y divide-line/60">
-                {[
-                  ["Periodo cubierto", ANNUAL.period],
-                  ["Registros M4 o más", fmt(ANNUAL.totalM4)],
-                  ["Sismos M6 — M7.9", `${ANNUAL.m6 + ANNUAL.m7} (${ANNUAL.m7} de M7+)`],
-                  ["Más fuerte", "M7.8 · Mindanao, Filipinas"],
-                  ["Más mortífero", "Venezuela · 6.301 fallecidos"],
-                  ["En el Anillo de Fuego", "10 de 11 sismos M7+"],
-                ].map(([k, v]) => (
-                  <div key={k} className="flex items-baseline justify-between gap-4 px-5 py-3">
-                    <dt className="font-mono text-[10px] tracking-[0.18em] text-dim uppercase">{k}</dt>
-                    <dd className="text-right text-sm font-semibold text-bone">{v}</dd>
-                  </div>
-                ))}
-              </dl>
+              <table className="w-full border-collapse">
+                <tbody>
+                  {[
+                    ["Periodo cubierto", ANNUAL.period],
+                    ["Registros M4 o más", fmt(ANNUAL.totalM4)],
+                    ["Sismos M6 — M7.9", `${ANNUAL.m6 + ANNUAL.m7} (${ANNUAL.m7} de M7+)`],
+                    ["Más fuerte", "M7.8 · Mindanao, Filipinas"],
+                    ["Más mortífero", "Venezuela · 6.301 fallecidos"],
+                    ["En el Anillo de Fuego", "10 de 11 sismos M7+"],
+                  ].map(([k, v]) => (
+                    <tr key={k} className="border-b border-line/60 last:border-0">
+                      <td className="px-5 py-3 align-baseline font-mono text-[10px] tracking-[0.18em] text-dim uppercase">{k}</td>
+                      <td className="px-5 py-3 text-right text-sm font-semibold text-bone">{v}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
               <div className="border-t border-line px-5 py-3">
                 <div className="mb-1 font-mono text-[9px] tracking-[0.22em] text-dim uppercase">Onda sísmica · simulación</div>
                 <Seismograph amp={0.45} seed={26} height={54} color="#3ec9a7" />
               </div>
+            </div>
+
+            {/* resumen en vivo · USGS (se actualiza solo cada 5 min) */}
+            <div className="mt-4 border border-teal/40 bg-panel">
+              <div className="flex items-center justify-between border-b border-teal/30 bg-deep/60 px-5 py-3">
+                <span className="flex items-center gap-2 font-mono text-[10px] tracking-[0.22em] text-teal uppercase">
+                  <span className="relative flex h-2 w-2">
+                    <span className="ping-slow absolute inline-flex h-full w-full rounded-full bg-teal opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-teal" />
+                  </span>
+                  Resumen en vivo · USGS
+                </span>
+                <span className={`font-mono text-[9px] tracking-widest uppercase ${liveStale ? "text-amber" : "text-dim"}`}>
+                  {liveStatus === "ok"
+                    ? liveStale
+                      ? `caché · ${timeAgo(liveUpdated ?? Date.now())}`
+                      : `act. ${timeAgo(liveUpdated ?? Date.now())}`
+                    : liveStatus === "loading"
+                      ? "sincronizando…"
+                      : "sin señal"}
+                </span>
+              </div>
+              {liveStatus === "ok" ? (
+                <table className="w-full border-collapse">
+                  <tbody>
+                    {[
+                      ["Sismos M4.5+ (30 d)", String(liveQuakes.length)],
+                      ["Máxima magnitud", `M${liveMax.toFixed(1)}`],
+                      ["Último evento", latest ? latest.place : "—"],
+                      ["Países y territorios", String(liveCountries)],
+                      ["Alertas de tsunami", String(liveTsunami)],
+                    ].map(([k, v]) => (
+                      <tr key={k} className="border-b border-line/60 last:border-0">
+                        <td className="px-5 py-2.5 align-baseline font-mono text-[10px] tracking-[0.18em] text-dim uppercase">{k}</td>
+                        <td className="px-5 py-2.5 text-right text-sm font-semibold break-words text-bone">{v}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : liveStatus === "loading" ? (
+                <div className="space-y-3 p-5">
+                  {[0, 1, 2, 3].map((i) => (
+                    <div key={i} className="pulse-soft h-4 border border-line bg-deep" style={{ animationDelay: `${i * 120}ms` }} />
+                  ))}
+                </div>
+              ) : (
+                <p className="px-5 py-6 text-center font-mono text-[10px] tracking-[0.18em] text-dim uppercase">
+                  Señal interrumpida — pulsa ↻ para reintentar
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -207,81 +594,25 @@ export default function App() {
           sub="Proyección Natural Earth con los epicentros de 2026. El tamaño y el color de cada punto siguen la magnitud de momento (Mw). Rueda para hacer zoom, arrastra para moverte."
         />
 
-        <div ref={dashRef} className="rv mb-5 flex flex-wrap items-center gap-3">
-          <span className="font-mono text-[10px] tracking-[0.2em] text-dim uppercase">Magnitud</span>
-          <div className="flex overflow-hidden border border-line">
-            {MAG_CHIPS.map((c) => (
-              <button
-                key={c.v}
-                onClick={() => setMinMag(c.v)}
-                className={`chip-btn px-3.5 py-1.5 font-mono text-xs ${
-                  minMag === c.v ? "bg-amber text-abyss" : "bg-panel text-fog hover:text-bone"
-                }`}
-              >
-                {c.l}
-              </button>
-            ))}
-          </div>
-          <span className="ml-2 font-mono text-[10px] tracking-[0.2em] text-dim uppercase">Región</span>
-          <select
-            value={region}
-            onChange={(e) => setRegion(e.target.value as (typeof REGIONS)[number])}
-            className="chip-btn border border-line bg-panel px-3 py-1.5 font-mono text-xs text-bone outline-none hover:border-fog"
-          >
-            {REGIONS.map((r) => (
-              <option key={r} value={r}>{r}</option>
-            ))}
-          </select>
-          <span className="ml-2 font-mono text-[10px] tracking-[0.2em] text-dim uppercase">Mes</span>
-          <select
-            value={month}
-            onChange={(e) => setMonth(Number(e.target.value))}
-            className="chip-btn border border-line bg-panel px-3 py-1.5 font-mono text-xs text-bone outline-none hover:border-fog"
-          >
-            <option value={-1}>Todo el año</option>
-            {MONTHS_ES.slice(0, 8).map((m, i) => (
-              <option key={m} value={i}>{m}</option>
-            ))}
-          </select>
-          <span className="ml-auto border border-line bg-panel px-3 py-1.5 font-mono text-[11px] tracking-widest text-jade">
-            {filtered.length} EVENTOS
-          </span>
-          <button
-            onClick={() => setShowLive((v) => !v)}
-            aria-pressed={showLive}
-            title="Mostrar u ocultar la capa de sismos en vivo del USGS"
-            className={`flex items-center gap-2 border px-3 py-1.5 font-mono text-[11px] tracking-widest uppercase transition-colors ${
-              showLive
-                ? "border-teal/60 bg-teal/10 text-teal"
-                : "border-line bg-panel text-dim hover:text-fog"
-            }`}
-          >
-            <span className={`inline-block h-2 w-2 rounded-full ${showLive ? "blink-dot bg-teal" : "bg-dim"}`} />
-            EN VIVO USGS · {liveStatus === "loading" ? "···" : liveQuakes.length}
-          </button>
-          <button
-            onClick={refreshLive}
-            aria-label="Actualizar datos del USGS"
-            title="Actualizar datos del USGS"
-            className="chip-btn grid h-[30px] w-[30px] place-items-center border border-line bg-panel text-fog hover:border-teal hover:text-teal"
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              className={liveStatus === "loading" ? "animate-spin" : ""}
-            >
-              <path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.5v3h-3" />
-            </svg>
-          </button>
-        </div>
+        <div ref={dashRef} className="rv mb-5">{renderFilters(false)}</div>
 
-        <div className="grid gap-4 lg:h-[620px] lg:grid-cols-12">
-          <div className="h-[420px] sm:h-[500px] lg:col-span-7 lg:h-full">
+        <YearPlayer
+          playing={timePlay}
+          month={timeMonth}
+          disabled={month !== -1 || mapMode === "live"}
+          disabledHint={
+            mapMode === "live"
+              ? "El reproductor anima solo el catálogo 2026 — usa la capa Local o Ambos"
+              : "Desactiva el filtro de mes para reproducir"
+          }
+          count={visibleQuakes.length}
+          onPlayPause={togglePlayer}
+          onSeek={setTimeMonth}
+          onReset={resetPlayer}
+        />
+
+        <div className="grid grid-cols-1 gap-4 lg:h-[620px] lg:grid-cols-12">
+          <div className="h-[58vw] max-h-[500px] min-h-[280px] sm:h-[500px] lg:col-span-7 lg:h-full">
             <WorldMap
               quakes={filtered}
               selectedId={selectedId}
@@ -290,12 +621,17 @@ export default function App() {
                 if (id) setLiveSel(null);
               }}
               liveQuakes={liveQuakes}
-              showLive={showLive && liveStatus === "ok"}
+              mode={mapMode}
               liveSelectedId={liveSel}
               onSelectLive={(id) => {
                 setLiveSel(id);
                 if (id) setSelectedId(null);
               }}
+              caption={caption}
+              fullscreenBar={renderFilters(true)}
+              maxMonth={timeMonth}
+              areaFilter={area}
+              onAreaChange={setArea}
             />
           </div>
           <div className="h-[480px] min-h-0 overflow-y-auto lg:col-span-5 lg:h-full">
@@ -304,8 +640,10 @@ export default function App() {
                 q={liveQuakes.find((q) => q.id === liveSel)!}
                 onClose={() => setLiveSel(null)}
               />
+            ) : mapMode === "live" ? (
+              <LiveList quakes={liveQuakes} onSelect={setLiveSel} alertIds={new Set(liveAlerts.map((a) => a.id))} />
             ) : (
-              <SidePanel quakes={filtered} selectedId={selectedId} onSelect={setSelectedId} />
+              <SidePanel quakes={visibleQuakes} selectedId={selectedId} onSelect={setSelectedId} />
             )}
           </div>
         </div>
@@ -316,7 +654,7 @@ export default function App() {
         <SectionHead
           num="01·B · Alimentación en vivo"
           title="PULSO EN TIEMPO REAL"
-          sub="Conexión directa a la API abierta del USGS Earthquake Hazards Program: cada sismo de magnitud 4.5 o mayor registrado en el mundo durante la última ventana móvil de 30 días, sin claves ni intermediarios."
+          sub="Conexión directa a la API abierta del USGS Earthquake Hazards Program: cada sismo de magnitud 4.5 o mayor registrado en el mundo durante una ventana móvil configurable (1 h · 24 h · 7 días · 30 días), sin claves ni intermediarios."
         />
 
         {liveStatus === "error" ? (
@@ -334,25 +672,53 @@ export default function App() {
             </button>
           </div>
         ) : (
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
             {/* estado del feed */}
             <div className="border border-teal/40 bg-panel">
-              <div className="flex items-center justify-between border-b border-teal/30 bg-deep/60 px-5 py-3">
-                <span className="flex items-center gap-2 font-mono text-[10px] tracking-[0.22em] text-teal uppercase">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-teal/30 bg-deep/60 px-4 py-3 sm:px-5">
+                <span className="flex w-full items-center gap-2 font-mono text-[10px] tracking-[0.22em] text-teal uppercase sm:w-auto">
                   <span className="relative flex h-2 w-2">
                     <span className="ping-slow absolute inline-flex h-full w-full rounded-full bg-teal opacity-75" />
                     <span className="relative inline-flex h-2 w-2 rounded-full bg-teal" />
                   </span>
                   USGS · FEED ABIERTO
                 </span>
+                <select
+                  value={liveWindow}
+                  onChange={(e) => setLiveWindow(e.target.value as LiveWindow)}
+                  title="Ventana del feed"
+                  aria-label="Ventana del feed"
+                  className="border border-teal/40 bg-deep px-2 py-1 font-mono text-[10px] tracking-widest text-teal uppercase outline-none hover:border-teal"
+                >
+                  {USGS_WINDOWS.map((w) => (
+                    <option key={w.key} value={w.key}>
+                      {w.label}
+                    </option>
+                  ))}
+                </select>
                 <a
-                  href={USGS_FEED_URL}
+                  href={feedUrl(liveWindow)}
                   target="_blank"
                   rel="noreferrer"
                   className="font-mono text-[10px] tracking-widest text-dim uppercase hover:text-teal"
                 >
                   GeoJSON ↗
                 </a>
+                <button
+                  onClick={() => setSoundOn((v) => !v)}
+                  aria-pressed={soundOn}
+                  aria-label={soundOn ? "Silenciar alertas de sismos grandes" : "Activar sonido de alertas"}
+                  title={soundOn ? "Alerta sonora activada · clic para silenciar" : "Alerta sonora desactivada · clic para activar"}
+                  className={`font-mono text-[10px] tracking-widest uppercase ${soundOn ? "text-amber" : "text-dim hover:text-teal"}`}
+                >
+                  {soundOn ? "🔔 ALERTA SONORA ON" : "🔕 ALERTA SONORA OFF"}
+                </button>
+                <button
+                  onClick={() => downloadLiveCSV(liveQuakes)}
+                  className="font-mono text-[10px] tracking-widest text-dim uppercase hover:text-teal"
+                >
+                  Guardar CSV
+                </button>
               </div>
               {liveStatus === "loading" ? (
                 <div className="space-y-3 p-5">
@@ -365,33 +731,35 @@ export default function App() {
                 </div>
               ) : (
                 <div className="p-5">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="border border-line/70 bg-deep/50 px-4 py-3">
+                  <div className="grid min-w-0 grid-cols-2 gap-2">
+                    <div className="min-w-0 border border-line/70 bg-deep/50 px-4 py-3">
                       <div className="font-display text-3xl text-teal">{liveQuakes.length}</div>
-                      <div className="mt-1 font-mono text-[9px] tracking-[0.16em] text-dim uppercase">Sismos M4.5+ en 30 días</div>
+                      <div className="mt-1 font-mono text-[9px] tracking-[0.16em] break-words text-dim uppercase">
+                        Sismos M4.5+ en {USGS_WINDOWS.find((w) => w.key === liveWindow)?.days}
+                      </div>
                     </div>
-                    <div className="border border-line/70 bg-deep/50 px-4 py-3">
+                    <div className="min-w-0 border border-line/70 bg-deep/50 px-4 py-3">
                       <div className="font-display text-3xl" style={{ color: magColor(liveQuakes.reduce((m, q) => Math.max(m, q.mag), 0)) }}>
                         M{liveQuakes.reduce((m, q) => Math.max(m, q.mag), 0).toFixed(1)}
                       </div>
-                      <div className="mt-1 font-mono text-[9px] tracking-[0.16em] text-dim uppercase">Máxima en la ventana</div>
+                      <div className="mt-1 font-mono text-[9px] tracking-[0.16em] break-words text-dim uppercase">Máxima en la ventana</div>
                     </div>
-                    <div className="border border-line/70 bg-deep/50 px-4 py-3">
-                      <div className="font-mono text-sm font-semibold text-bone">
+                    <div className="min-w-0 border border-line/70 bg-deep/50 px-4 py-3">
+                      <div className="font-mono text-sm font-semibold break-words text-bone">
                         {liveQuakes[0] ? timeAgo(liveQuakes[0].time) : "—"}
                       </div>
-                      <div className="mt-1 font-mono text-[9px] tracking-[0.16em] text-dim uppercase">Último evento</div>
+                      <div className="mt-1 font-mono text-[9px] tracking-[0.16em] break-words text-dim uppercase">Último evento</div>
                     </div>
-                    <div className="border border-line/70 bg-deep/50 px-4 py-3">
-                      <div className="font-mono text-sm font-semibold text-bone">
-                        {liveUpdated ? timeAgo(liveUpdated).replace("hace instantes", "ahora") : "—"}
+                    <div className="min-w-0 border border-line/70 bg-deep/50 px-4 py-3">
+                      <div className="font-mono text-sm font-semibold break-words text-bone">
+                        {liveUpdated ? (liveStale ? `caché · ${timeAgo(liveUpdated)}` : timeAgo(liveUpdated).replace("hace instantes", "ahora")) : "—"}
                       </div>
-                      <div className="mt-1 font-mono text-[9px] tracking-[0.16em] text-dim uppercase">Última sincronización</div>
+                      <div className="mt-1 font-mono text-[9px] tracking-[0.16em] break-words text-dim uppercase">Última sincronización</div>
                     </div>
                   </div>
                   <p className="mt-4 font-mono text-[10px] leading-relaxed tracking-wider text-dim uppercase">
                     Actualización automática cada 5 min · los marcadores con retícula verde en el mapa
-                    pertenecen a esta capa
+                    pertenecen a esta capa · sin conexión se sirve el último feed en caché
                   </p>
                 </div>
               )}
@@ -399,11 +767,11 @@ export default function App() {
 
             {/* últimos eventos */}
             <div className="border border-line bg-panel">
-              <div className="flex items-center justify-between border-b border-line bg-deep/60 px-5 py-3">
-                <span className="font-mono text-[10px] tracking-[0.22em] text-dim uppercase">
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-line bg-deep/60 px-4 py-3 sm:px-5">
+                <span className="min-w-0 font-mono text-[10px] tracking-[0.22em] text-dim uppercase">
                   Últimos eventos · clic para ubicar en el mapa
                 </span>
-                <span className="font-mono text-[10px] tracking-widest text-teal">
+                <span className="shrink-0 font-mono text-[10px] tracking-widest text-teal">
                   {liveStatus === "ok" ? `MOSTRANDO ${Math.min(12, liveQuakes.length)} DE ${liveQuakes.length}` : ""}
                 </span>
               </div>
@@ -415,20 +783,23 @@ export default function App() {
                 </div>
               ) : (
                 <ul className="divide-y divide-line/60">
-                  {liveQuakes.slice(0, 12).map((q) => (
-                    <li key={q.id}>
+                  {liveQuakes.slice(0, 12).map((q) => {
+                    const alert = liveAlerts.some((a) => a.id === q.id);
+                    return (
+                    <li key={q.id} className={alert ? "min-w-0 border-l-2 border-l-verm bg-verm/5" : "min-w-0"}>
                       <button
                         onClick={() => {
                           setLiveSel(q.id);
                           setSelectedId(null);
+                          if (alert) setLiveAlerts((cur) => cur.filter((a) => a.id !== q.id));
                           mapSecRef.current?.scrollIntoView({
                             behavior: reduced ? "auto" : "smooth",
                             block: "start",
                           });
                         }}
-                        className="row-hover group flex w-full items-center gap-4 px-5 py-2.5 text-left"
+                        className="row-hover group flex min-w-0 w-full items-center gap-4 px-4 py-2.5 text-left sm:px-5"
                       >
-                        <span className="w-16 shrink-0 font-mono text-[11px] tracking-wider text-dim">
+                        <span className="block w-16 shrink-0 truncate font-mono text-[11px] tracking-wider text-dim">
                           {timeAgo(q.time).replace("hace ", "")}
                         </span>
                         <span
@@ -438,7 +809,10 @@ export default function App() {
                           {q.mag.toFixed(1)}
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-semibold text-bone">{q.place}</span>
+                          <span className="block truncate text-sm font-semibold text-bone">
+                            {q.place}
+                            {alert && <span className="ml-2 font-mono text-[9px] tracking-widest text-verm uppercase">· ⚠ NUEVO</span>}
+                          </span>
                           <span className="block font-mono text-[10px] tracking-wider text-dim">
                             {q.depth} km prof. · sig {q.sig}
                             {q.tsunami && <span className="text-verm"> · ⚠ tsunami</span>}
@@ -458,7 +832,8 @@ export default function App() {
                         </svg>
                       </button>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
               )}
             </div>
@@ -474,6 +849,23 @@ export default function App() {
             title="BITÁCORA DEL AÑO"
             sub="Los eventos destacados del año, ordenables por fecha, magnitud, profundidad, víctimas o costo. Toca una fila para localizarla en el mapa."
           />
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => downloadQuakesCSV(filtered)}
+              className="chip-btn border border-line bg-panel px-4 py-2 font-mono text-[11px] tracking-[0.18em] text-fog uppercase hover:border-amber hover:text-amber"
+            >
+              ⬇ Exportar CSV
+            </button>
+            <button
+              onClick={() => downloadQuakesGeoJSON(filtered)}
+              className="chip-btn border border-line bg-panel px-4 py-2 font-mono text-[11px] tracking-[0.18em] text-fog uppercase hover:border-amber hover:text-amber"
+            >
+              ⬇ Exportar GeoJSON
+            </button>
+            <span className="ml-auto font-mono text-[10px] tracking-widest text-dim uppercase">
+              {filtered.length} registros filtrados
+            </span>
+          </div>
           <Registry quakes={filtered} onPick={pickFromTable} />
         </div>
       </section>
@@ -538,6 +930,62 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* alerta de sismo grande en vivo */}
+      {liveAlerts.length > 0 && (
+        <div className="fixed bottom-4 right-4 z-[80] flex w-[min(340px,calc(100vw-2rem))] flex-col gap-2">
+          <div className="flex items-center justify-between gap-3 border border-verm/60 bg-abyss/95 px-4 py-2.5 shadow-2xl shadow-black/50 backdrop-blur-sm">
+            <span className="flex items-center gap-2 font-mono text-[10px] font-semibold tracking-[0.22em] text-verm uppercase">
+              <span className="relative flex h-2 w-2">
+                <span className="ping-slow absolute inline-flex h-full w-full rounded-full bg-verm opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-verm" />
+              </span>
+              {liveAlerts.length === 1 ? "1 ALERTA M≥6" : `${liveAlerts.length} ALERTAS M≥6`}
+            </span>
+            <button
+              onClick={() => setLiveAlerts([])}
+              className="font-mono text-[11px] text-dim hover:text-bone"
+              aria-label="Descartar alertas"
+              title="Descartar alertas"
+            >
+              ×
+            </button>
+          </div>
+          {liveAlerts.slice(0, 3).map((q) => {
+            const c = magColor(q.mag);
+            return (
+              <button
+                key={q.id}
+                onClick={() => {
+                  setLiveSel(q.id);
+                  setSelectedId(null);
+                  setLiveAlerts((cur) => cur.filter((a) => a.id !== q.id));
+                  mapSecRef.current?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+                }}
+                className="row-hover flex items-center gap-3 border border-verm/40 bg-abyss/95 px-4 py-2.5 text-left shadow-2xl shadow-black/50 backdrop-blur-sm"
+              >
+                <span
+                  className="grid h-9 w-12 shrink-0 place-items-center border font-display text-lg"
+                  style={{ color: c, borderColor: `${c}55`, background: `${c}12` }}
+                >
+                  {q.mag.toFixed(1)}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold text-bone">{q.place}</span>
+                  <span className="block font-mono text-[10px] tracking-wider text-verm uppercase">
+                    NUEVO · M≥6 · {timeAgo(q.time)}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+          {liveAlerts.length > 3 && (
+            <div className="border border-line bg-abyss/95 px-4 py-1.5 text-center font-mono text-[10px] tracking-widest text-dim uppercase">
+              +{liveAlerts.length - 3} más en la lista
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

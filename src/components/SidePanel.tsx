@@ -89,6 +89,83 @@ export function LiveDetail({ q, onClose }: { q: LiveQuake; onClose: () => void }
   );
 }
 
+/* ---- lista de eventos EN VIVO (USGS) ---- */
+export function LiveList({
+  quakes,
+  onSelect,
+  alertIds,
+}: {
+  quakes: LiveQuake[];
+  onSelect: (id: string) => void;
+  alertIds?: Set<string>;
+}) {
+  return (
+    <aside className="flex h-full min-h-0 flex-col border border-teal/40 bg-panel">
+      <div className="flex items-start justify-between gap-3 border-b border-teal/30 bg-deep/60 px-4 py-3">
+        <div>
+          <div className="flex items-center gap-2 font-mono text-[10px] font-semibold tracking-[0.22em] text-teal uppercase">
+            <span className="relative flex h-2 w-2">
+              <span className="ping-slow absolute inline-flex h-full w-full rounded-full bg-teal opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-teal" />
+            </span>
+            PULSO EN VIVO · USGS
+          </div>
+          <h3 className="mt-1 font-display text-xl tracking-wide text-bone">ÚLTIMOS EVENTOS</h3>
+        </div>
+        <span className="shrink-0 font-mono text-[10px] tracking-widest text-teal">
+          {quakes.length} M4.5+ · 30 d
+        </span>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {quakes.length === 0 && (
+          <p className="px-4 py-8 text-center text-sm text-dim">
+            Sintonizando estaciones sísmicas…
+          </p>
+        )}
+        {quakes.slice(0, 20).map((q) => {
+          const c = magColor(q.mag);
+          const alert = alertIds?.has(q.id) ?? false;
+          return (
+            <button
+              key={q.id}
+              onClick={() => onSelect(q.id)}
+              className={`row-hover group flex w-full items-center gap-3 border-b border-line/60 px-4 py-2.5 text-left ${
+                alert ? "border-l-2 border-l-verm bg-verm/5" : ""
+              }`}
+            >
+              {alert && (
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="ping-slow absolute inline-flex h-full w-full rounded-full bg-verm opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-verm" />
+                </span>
+              )}
+              <span
+                className="grid h-9 w-12 shrink-0 place-items-center border font-display text-lg"
+                style={{ color: c, borderColor: `${c}55`, background: `${c}12` }}
+              >
+                {q.mag.toFixed(1)}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold text-bone">{q.place}</span>
+                <span className="block font-mono text-[10px] tracking-wider text-dim">
+                  {timeAgo(q.time)} · {q.depth} km prof.
+                  {q.tsunami && <span className="text-verm"> · ⚠ tsunami</span>}
+                </span>
+              </span>
+              <svg width="14" height="14" viewBox="0 0 14 14" className="shrink-0 text-dim transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-teal" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+                <path d="M4 2l6 5-6 5" />
+              </svg>
+            </button>
+          );
+        })}
+      </div>
+      <div className="border-t border-line px-4 py-2.5 font-mono text-[10px] tracking-[0.14em] text-dim uppercase">
+        Toca un sismo para abrir su ficha
+      </div>
+    </aside>
+  );
+}
+
 interface Props {
   quakes: Quake[];
   selectedId: string | null;
@@ -113,9 +190,9 @@ function Detail({ q, onClose }: { q: Quake; onClose: () => void }) {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-start justify-between gap-3 border-b border-line px-4 py-3">
-        <div>
+        <div className="min-w-0">
           <div className="font-mono text-[10px] tracking-[0.2em] text-dim uppercase">Ficha del evento</div>
-          <h3 className="mt-1 font-display text-xl leading-tight tracking-wide text-bone">
+          <h3 className="mt-1 font-display text-xl leading-tight tracking-wide break-words text-bone">
             {q.country.toUpperCase()}
             <span className="text-fog"> · M{q.mag.toFixed(1)}</span>
           </h3>
