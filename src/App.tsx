@@ -3,6 +3,7 @@ import type { Region, Quake } from "./data/quakes";
 import { QUAKES, ANNUAL, fmt, MONTHS_ES, magColor, depthClass, CATALOG_FIRST, CATALOG_LAST } from "./data/quakes";
 import type { MapMode, AreaRect } from "./components/WorldMap";
 import BottomSheet from "./components/BottomSheet";
+import MobileNav from "./components/MobileNav";
 import { fetchLiveQuakes, timeAgo, feedUrl, loadLiveCache, USGS_WINDOWS } from "./data/usgs";
 import type { LiveQuake, LiveWindow } from "./data/usgs";
 import { downloadLiveCSV, downloadQuakesCSV, downloadQuakesGeoJSON } from "./data/export";
@@ -587,22 +588,9 @@ export default function App() {
             </button>
           </div>
         </div>
-
-        {menuOpen && (
-          <nav className="border-t border-line bg-abyss/95 backdrop-blur-sm md:hidden">
-            {NAV.map(([h, l]) => (
-              <a
-                key={h}
-                href={h}
-                onClick={() => setMenuOpen(false)}
-                className="chip-btn block border-b border-line/60 px-5 py-3.5 font-mono text-[11px] tracking-[0.18em] text-fog uppercase hover:text-amber"
-              >
-                {l}
-              </a>
-            ))}
-          </nav>
-        )}
       </header>
+
+      <MobileNav open={menuOpen} onClose={() => setMenuOpen(false)} items={NAV} />
 
       <Ticker quakes={QUAKES} />
 
