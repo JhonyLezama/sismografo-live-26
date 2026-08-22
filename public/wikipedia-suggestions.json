@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-08-15T20:43:42.039Z",
+  "updatedAt": "2026-08-22T01:23:02.979Z",
   "suggestions": {
     "ve-75": {
       "title": "Terremotos de Venezuela de 2026",
@@ -155,6 +155,11 @@
       "title": "Terremoto de México de 1985",
       "snippet": "desaparecidas tras el terremoto. Lista de terremotos en México Terremoto de México de 1957 Terremoto de México del 19 de septiembre de 2017 Terremoto de Chiapas",
       "url": "https://es.wikipedia.org/wiki/Terremoto_de_México_de_1985"
+    },
+    "us-us6000tm81": {
+      "title": "Terremoto del Perú de 2007",
+      "snippet": "El terremoto de Pisco de 2007 fue un terremoto registrado el miércoles 15 de agosto de 2007 a las 18:40:57 PET (23:40:57 UTC) con una duración aproximada",
+      "url": "https://es.wikipedia.org/wiki/Terremoto_del_Perú_de_2007"
     }
   }
 }
