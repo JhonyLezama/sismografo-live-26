@@ -761,5 +761,339 @@
     "tsunami": false,
     "plates": "Sismicidad inducida por minería (Alta Silesia)",
     "summary": "El evento más pequeño y a la vez más insólito de la lista: un temblor inducido por actividad minera que causó una víctima en la cuenca hullera de Silesia."
+  },
+  {
+    "id": "us-us7000tdw6",
+    "place": "21 km WNW of Jiangyou, China",
+    "country": "China",
+    "iso": "CN",
+    "region": "Asia",
+    "date": "2026-09-03",
+    "time": "11:39",
+    "lat": 31.85,
+    "lon": 104.51,
+    "mag": 5.4,
+    "depth": 10,
+    "mmi": "VI",
+    "mmiLabel": "Fuerte",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": false,
+    "plates": "Sin asignar",
+    "usgsId": "us7000tdw6",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us7000tdw6. Pendiente de revisión.",
+    "gdacsId": "1563346",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us7000tdw6/executive"
+      },
+      {
+        "label": "GDACS · informe",
+        "url": "https://www.gdacs.org/report.aspx?eventtype=EQ&eventid=1563346"
+      }
+    ]
+  },
+  {
+    "id": "us-us7000tdvt",
+    "place": "84 km SSW of Nikolski, Alaska",
+    "country": "Alaska",
+    "iso": "US",
+    "region": "Norteamérica",
+    "date": "2026-09-03",
+    "time": "11:17",
+    "lat": 52.26,
+    "lon": -169.41,
+    "mag": 6.3,
+    "depth": 35,
+    "mmi": "IV",
+    "mmiLabel": "Ligero",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": true,
+    "plates": "Sin asignar",
+    "usgsId": "us7000tdvt",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us7000tdvt. Pendiente de revisión.",
+    "gdacsId": "1563341",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us7000tdvt/executive"
+      },
+      {
+        "label": "GDACS · informe",
+        "url": "https://www.gdacs.org/report.aspx?eventtype=EQ&eventid=1563341"
+      }
+    ]
+  },
+  {
+    "id": "us-us7000tbwb",
+    "place": "55 km NW of Kodāri̇̄, Nepal",
+    "country": "Nepal",
+    "iso": "",
+    "region": "Asia",
+    "date": "2026-08-26",
+    "time": "02:52",
+    "lat": 28.27,
+    "lon": 85.52,
+    "mag": 5.2,
+    "depth": 0,
+    "mmi": "—",
+    "mmiLabel": "Sin datos",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": false,
+    "plates": "Sin asignar",
+    "usgsId": "us7000tbwb",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us7000tbwb. Pendiente de revisión.",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us7000tbwb/executive"
+      }
+    ]
+  },
+  {
+    "id": "us-us6000tna9",
+    "place": "4 km NNE of Jalālābād, Afghanistan",
+    "country": "Afghanistan",
+    "iso": "AF",
+    "region": "Asia",
+    "date": "2026-08-25",
+    "time": "01:18",
+    "lat": 34.46,
+    "lon": 70.46,
+    "mag": 4.9,
+    "depth": 10,
+    "mmi": "VI",
+    "mmiLabel": "Fuerte",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": false,
+    "plates": "Sin asignar",
+    "usgsId": "us6000tna9",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us6000tna9. Pendiente de revisión.",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tna9/executive"
+      }
+    ]
+  },
+  {
+    "id": "us-us6000tmta",
+    "place": "2 km NNW of Toride, Japan",
+    "country": "Japan",
+    "iso": "JP",
+    "region": "Asia",
+    "date": "2026-08-22",
+    "time": "17:00",
+    "lat": 35.92,
+    "lon": 140.08,
+    "mag": 5.8,
+    "depth": 61,
+    "mmi": "VI",
+    "mmiLabel": "Fuerte",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": false,
+    "plates": "Sin asignar",
+    "usgsId": "us6000tmta",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us6000tmta. Pendiente de revisión.",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tmta/executive"
+      }
+    ]
+  },
+  {
+    "id": "us-us6000tm81",
+    "place": "37 km NE of Tambo, Peru",
+    "country": "Peru",
+    "iso": "PE",
+    "region": "Sudamérica",
+    "date": "2026-08-20",
+    "time": "18:00",
+    "lat": -14.6,
+    "lon": -73.64,
+    "mag": 6.7,
+    "depth": 99,
+    "mmi": "VI",
+    "mmiLabel": "Fuerte",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": false,
+    "plates": "Sin asignar",
+    "usgsId": "us6000tm81",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us6000tm81. Pendiente de revisión.",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tm81/executive"
+      }
+    ]
+  },
+  {
+    "id": "us-us6000tlrj",
+    "place": "269 km SSE of Dunhuang, China",
+    "country": "China",
+    "iso": "CN",
+    "region": "Asia",
+    "date": "2026-08-18",
+    "time": "21:36",
+    "lat": 37.83,
+    "lon": 95.54,
+    "mag": 5.5,
+    "depth": 6,
+    "mmi": "VII",
+    "mmiLabel": "Mayor",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": false,
+    "plates": "Sin asignar",
+    "usgsId": "us6000tlrj",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us6000tlrj. Pendiente de revisión.",
+    "gdacsId": "1563407",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tlrj/executive"
+      },
+      {
+        "label": "GDACS · informe",
+        "url": "https://www.gdacs.org/report.aspx?eventtype=EQ&eventid=1563407"
+      }
+    ]
+  },
+  {
+    "id": "us-us6000tkyk",
+    "place": "9 km WNW of Pematangsiantar, Indonesia",
+    "country": "Indonesia",
+    "iso": "ID",
+    "region": "Asia",
+    "date": "2026-08-15",
+    "time": "10:54",
+    "lat": 2.99,
+    "lon": 98.99,
+    "mag": 6.9,
+    "depth": 175,
+    "mmi": "V",
+    "mmiLabel": "Moderado",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": false,
+    "plates": "Sin asignar",
+    "usgsId": "us6000tkyk",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us6000tkyk. Pendiente de revisión.",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tkyk/executive"
+      }
+    ]
+  },
+  {
+    "id": "us-us6000tkv2",
+    "place": "2 km W of Las Gabias, Spain",
+    "country": "Spain",
+    "iso": "",
+    "region": "Europa",
+    "date": "2026-08-14",
+    "time": "23:04",
+    "lat": 37.14,
+    "lon": -3.7,
+    "mag": 5.2,
+    "depth": 10,
+    "mmi": "VII",
+    "mmiLabel": "Mayor",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": false,
+    "plates": "Sin asignar",
+    "usgsId": "us6000tkv2",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us6000tkv2. Pendiente de revisión.",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tkv2/executive"
+      }
+    ]
+  },
+  {
+    "id": "us-nc75417557",
+    "place": "3 km N of San Leandro, CA",
+    "country": "CA",
+    "iso": "",
+    "region": "Norteamérica",
+    "date": "2026-08-13",
+    "time": "15:30",
+    "lat": 37.76,
+    "lon": -122.15,
+    "mag": 3.8,
+    "depth": 6,
+    "mmi": "IV",
+    "mmiLabel": "Ligero",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": false,
+    "plates": "Sin asignar",
+    "usgsId": "nc75417557",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/nc75417557. Pendiente de revisión.",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/nc75417557/executive"
+      }
+    ]
+  },
+  {
+    "id": "us-aka2026powmkf",
+    "place": "57 km WNW of Skwentna, Alaska",
+    "country": "Alaska",
+    "iso": "US",
+    "region": "Norteamérica",
+    "date": "2026-08-08",
+    "time": "04:50",
+    "lat": 62.27,
+    "lon": -152.31,
+    "mag": 5.6,
+    "depth": 10,
+    "mmi": "VI",
+    "mmiLabel": "Fuerte",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": false,
+    "plates": "Sin asignar",
+    "usgsId": "aka2026powmkf",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/aka2026powmkf. Pendiente de revisión.",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/aka2026powmkf/executive"
+      }
+    ]
   }
 ]
