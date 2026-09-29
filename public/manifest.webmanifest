@@ -1,12 +1,15 @@
 {
   "name": "Sismógrafo 2026 · Observatorio de Terremotos",
   "short_name": "Sismógrafo·26",
-  "description": "Observatorio sísmico 2026: mapa mundial de epicentros, magnitudes, intensidad Mercalli, víctimas y costo estimado, con el feed en vivo del USGS.",
+  "description": "¿Sentiste un temblor? Descubre en segundos qué sismo fue con datos en vivo del USGS y EMSC, más el mapa mundial y el archivo 2026. Funciona sin conexión.",
   "lang": "es",
+  "dir": "ltr",
+  "id": "./",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",
   "orientation": "any",
+  "categories": ["news", "utilities", "weather"],
   "background_color": "#0B1214",
   "theme_color": "#0B1214",
   "icons": [
@@ -27,6 +30,22 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "En vivo · ¿qué temblor fue?",
+      "short_name": "En vivo",
+      "description": "Últimos sismos registrados por USGS y EMSC",
+      "url": "./#en-vivo",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Archivo 2026",
+      "short_name": "Archivo",
+      "description": "Mapa, bitácora y balance de la temporada sísmica 2026",
+      "url": "./#registro",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

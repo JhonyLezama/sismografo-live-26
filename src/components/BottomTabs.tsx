@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Activity, Archive, Scale, Waves, Info, MoreHorizontal, Vibrate } from "lucide-react";
+import { Activity, Archive, Scale, Waves, Info, MoreHorizontal, Vibrate, Download } from "lucide-react";
 import BottomSheet from "./BottomSheet";
+import { useInstallPrompt } from "../hooks";
 
 interface Props {
   active: string;
@@ -15,6 +16,7 @@ const MORE_ITEMS = [
 /* Barra inferior tipo app: En vivo + Archivo + LO SENTÍ + Escalas + Más */
 export default function BottomTabs({ active, onFelt }: Props) {
   const [moreOpen, setMoreOpen] = useState(false);
+  const pwa = useInstallPrompt();
   const moreActive = active === "#balance" || active === "#acerca";
 
   const tab = (href: string, label: string, Icon: typeof Activity) => {
@@ -101,6 +103,28 @@ export default function BottomTabs({ active, onFelt }: Props) {
               </li>
             ))}
           </ul>
+          {pwa.canPrompt ? (
+            <button
+              onClick={() => {
+                setMoreOpen(false);
+                void pwa.install();
+              }}
+              className="chip-btn mt-3 flex w-full items-center gap-3 border border-amber/60 bg-amber/15 px-3 py-3 text-left"
+            >
+              <span className="grid h-9 w-9 shrink-0 place-items-center border border-amber/40 bg-deep text-amber">
+                <Download size={16} strokeWidth={1.8} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-mono text-[12px] tracking-[0.16em] text-amber uppercase">Instalar app</span>
+                <span className="block truncate text-xs text-dim">Acceso directo y funciona sin conexión</span>
+              </span>
+            </button>
+          ) : pwa.canInstall ? (
+            <p className="mt-3 border border-line bg-deep/60 px-3 py-2.5 text-xs leading-relaxed text-fog">
+              Para instalarla: en Safari toca <span className="text-bone">Compartir</span> →{" "}
+              <span className="text-bone">Añadir a pantalla de inicio</span>.
+            </p>
+          ) : null}
         </div>
       </BottomSheet>
     </>

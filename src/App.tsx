@@ -19,6 +19,7 @@ import Toaster from "./components/Toaster";
 import SideNav from "./components/SideNav";
 import BottomTabs from "./components/BottomTabs";
 import FeltSheet from "./components/FeltSheet";
+import SearchBox from "./components/SearchBox";
 import { useScramble, useUtcClock, useReveal, usePrefersReducedMotion, useMediaQuery } from "./hooks";
 
 /* secciones pesadas cargadas bajo demanda (código dividido por chunks) */
@@ -63,6 +64,7 @@ const readUrl = () => {
   const modo = p.get("modo");
   const prof = p.get("prof");
   const zona = p.get("zona");
+  const q = (p.get("q") ?? "").slice(0, 60);
   let area: AreaRect | null = null;
   if (zona) {
     const v = zona.split(",").map(Number);
@@ -82,6 +84,7 @@ const readUrl = () => {
     mapMode: (modo === "both" || modo === "local" ? modo : "local") as MapMode,
     depth: (prof === "sup" || prof === "int" || prof === "deep" ? prof : "all") as DepthFilter,
     area,
+    q,
   };
 };
 
@@ -188,6 +191,7 @@ export default function App() {
   const [month, setMonth] = useState(urlInit.month);
   const [depth, setDepth] = useState<DepthFilter>(urlInit.depth);
   const [area, setArea] = useState<AreaRect | null>(urlInit.area ?? null);
+  const [query, setQuery] = useState(urlInit.q);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [feltOpen, setFeltOpen] = useState(false);
@@ -312,6 +316,7 @@ export default function App() {
   const isMobile = useMediaQuery("(max-width: 1023px)");
   const isDesktop = !isMobile;
   const mapSecRef = useRef<HTMLDivElement | null>(null);
+  const archiveMapRef = useRef<HTMLDivElement | null>(null);
 
   /* vista móvil por hash: una sección a la vez, cero scroll largo (desktop intacto) */
   const [hashView, setHashView] = useState<string>(() => normHash(window.location.hash));
@@ -344,6 +349,12 @@ export default function App() {
   const labRef = useReveal<HTMLDivElement>();
   const balRef = useReveal<HTMLDivElement>();
 
+  /* búsqueda por lugar: tolera mayúsculas y tildes */
+  const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const queryNorm = norm(query.trim());
+  const matchQuery = (fields: (string | undefined | null)[]) =>
+    !queryNorm || fields.some((f) => f && norm(f).includes(queryNorm));
+
   const filtered = useMemo(
     () =>
       QUAKES.filter(
@@ -352,9 +363,11 @@ export default function App() {
           (region === "Todas" || q.region === region) &&
           (month < 0 || Number(q.date.slice(5, 7)) - 1 === month) &&
           (depth === "all" || depthClass(q.depth).label === DEPTH_LABEL[depth]) &&
-          (!area || (q.lat >= area.minLat && q.lat <= area.maxLat && q.lon >= area.minLon && q.lon <= area.maxLon))
+          (!area || (q.lat >= area.minLat && q.lat <= area.maxLat && q.lon >= area.minLon && q.lon <= area.maxLon)) &&
+          matchQuery([q.country, q.place, q.region])
       ),
-    [minMag, region, month, depth, area]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [minMag, region, month, depth, area, queryNorm]
   );
 
   const visibleQuakes = useMemo(
@@ -372,10 +385,26 @@ export default function App() {
         (q) =>
           q.mag >= minMag &&
           (depth === "all" || depthClass(q.depth).label === DEPTH_LABEL[depth]) &&
-          (!area || (q.lat >= area.minLat && q.lat <= area.maxLat && q.lon >= area.minLon && q.lon <= area.maxLon))
+          (!area || (q.lat >= area.minLat && q.lat <= area.maxLat && q.lon >= area.minLon && q.lon <= area.maxLon)) &&
+          matchQuery([q.country, q.place])
       ),
-    [liveQuakes, minMag, depth, area]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [liveQuakes, minMag, depth, area, queryNorm]
   );
+
+  /* países calientes del feed para chips de un toque */
+  const hotCountries = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const q of liveQuakes) {
+      if (q.mag < minMag) continue;
+      counts.set(q.country, (counts.get(q.country) ?? 0) + 1);
+    }
+    return [...counts.entries()]
+      .filter(([c]) => c && c !== "—")
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([c]) => c);
+  }, [liveQuakes, minMag]);
 
   const modeCount =
     mapMode === "live"
@@ -424,7 +453,7 @@ export default function App() {
   useEffect(() => {
     setSelectedId(null);
     setLiveSel(null);
-  }, [minMag, region, month, depth, area]);
+  }, [minMag, region, month, depth, area, queryNorm]);
 
   /* filtros compartibles por URL */
   useEffect(() => {
@@ -435,23 +464,48 @@ export default function App() {
     if (mapMode !== "local") p.set("modo", mapMode);
     if (depth !== "all") p.set("prof", depth);
     if (area) p.set("zona", `${area.minLat},${area.maxLat},${area.minLon},${area.maxLon}`);
+    if (query.trim()) p.set("q", query.trim().slice(0, 60));
     const qs = p.toString();
     window.history.replaceState(null, "", qs ? `${window.location.pathname}?${qs}` : window.location.pathname);
-  }, [minMag, region, month, mapMode, depth, area]);
+  }, [minMag, region, month, mapMode, depth, area, query]);
 
+  /* filas del archivo → mapa del archivo */
   const pickFromTable = (q: Quake) => {
     setSelectedId(q.id);
     const goMap = () =>
-      mapSecRef.current?.scrollIntoView({
+      archiveMapRef.current?.scrollIntoView({
         behavior: reduced ? "auto" : "smooth",
         block: "center",
       });
-    if (isMobile && hashView !== "#en-vivo") {
-      window.location.hash = "#en-vivo";
+    if (isMobile && hashView !== "#registro") {
+      window.location.hash = "#registro";
       window.setTimeout(goMap, 150);
     } else {
       goMap();
     }
+  };
+
+  /* Enter en la búsqueda: mejor match en vivo, si no en archivo */
+  const submitSearch = () => {
+    const top = filteredLive[0];
+    if (top) {
+      setLiveSel(top.id);
+      setSelectedId(null);
+      const goMap = () =>
+        mapSecRef.current?.scrollIntoView({
+          behavior: reduced ? "auto" : "smooth",
+          block: "start",
+        });
+      if (isMobile && hashView !== "#en-vivo") {
+        window.location.hash = "#en-vivo";
+        window.setTimeout(goMap, 150);
+      } else {
+        goMap();
+      }
+      return;
+    }
+    const a = filtered[0];
+    if (a) pickFromTable(a);
   };
 
   const liveMax = filteredLive.reduce((m, q) => Math.max(m, q.mag), 0);
@@ -751,6 +805,36 @@ export default function App() {
               >
                 Ver mapa en vivo
               </a>
+            </div>
+            <div className="mt-5">
+              <SearchBox id="q-live" value={query} onChange={setQuery} onSubmit={submitSearch} />
+              {hotCountries.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {hotCountries.map((c) => {
+                    const on = queryNorm === norm(c);
+                    return (
+                      <button
+                        key={c}
+                        onClick={() => setQuery((cur) => (norm(cur) === norm(c) ? "" : c))}
+                        aria-pressed={on}
+                        className={`chip-btn border px-2.5 py-1 font-mono text-[10px] tracking-[0.16em] uppercase ${
+                          on ? "border-amber bg-amber/15 text-amber" : "border-line text-dim hover:border-teal hover:text-teal"
+                        }`}
+                      >
+                        {c}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {queryNorm && (
+                <p className="mt-2 font-mono text-[10px] tracking-[0.16em] text-dim uppercase">
+                  {liveStatus === "loading"
+                    ? "Buscando…"
+                    : `${filteredLive.length} en vivo · ${filtered.length} en archivo 2026`}
+                  {liveStatus === "ok" && filteredLive.length === 0 && filtered.length > 0 && " · Enter para ver el archivo"}
+                </p>
+              )}
             </div>
           </div>
 
@@ -1086,7 +1170,7 @@ export default function App() {
             onReset={resetPlayer}
           />
 
-          <div className="mb-10 grid grid-cols-1 gap-4 lg:h-[620px] lg:grid-cols-12">
+          <div ref={archiveMapRef} className="mb-10 grid grid-cols-1 gap-4 scroll-mt-24 lg:h-[620px] lg:grid-cols-12">
             <div className="h-[65vh] min-h-[340px] max-h-[580px] sm:h-[500px] lg:col-span-7 lg:h-full">
               <Suspense fallback={<MapSkeleton />}>
                 <WorldMap
@@ -1123,6 +1207,20 @@ export default function App() {
 
           <div className="mb-4 font-mono text-[11px] tracking-[0.24em] text-amber uppercase">
             <span className="inline-block h-px w-10 bg-amber align-middle" /> Bitácora · tabla
+          </div>
+          <div className="mb-4">
+            <SearchBox
+              id="q-archivo"
+              value={query}
+              onChange={setQuery}
+              onSubmit={submitSearch}
+              placeholder="Filtrar archivo por país o lugar"
+            />
+            {queryNorm && (
+              <p className="mt-2 font-mono text-[10px] tracking-[0.16em] text-dim uppercase">
+                {filtered.length} en archivo 2026 · {filteredLive.length} en vivo · Enter localiza
+              </p>
+            )}
           </div>
           <div className="mb-4 grid grid-cols-2 items-center gap-2 md:flex md:flex-wrap">
             <button
