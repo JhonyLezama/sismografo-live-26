@@ -1,4 +1,4 @@
-/* Sismógrafo·26 — service worker
+/* Sismógrafo — service worker
    Estrategia: cache-first para assets inmutable (hasheados por Vite),
    network-first para navegación (con volcado a caché y fallo offline al shell).
    Todas las rutas son relativas al scope del SW para funcionar en subpath

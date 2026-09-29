@@ -80,7 +80,7 @@ export default function MobileNav({ open, onClose, items, active }: Props) {
                   </svg>
                 </span>
                 <span className="min-w-0 leading-tight">
-                  <span className="block truncate font-display text-lg tracking-[0.08em] text-bone">SISMÓGRAFO·26</span>
+                  <span className="block truncate font-display text-lg tracking-[0.08em] text-bone">SISMÓGRAFO</span>
                   <span className="block truncate font-mono text-[9px] tracking-[0.28em] text-dim uppercase">Observatorio de terremotos</span>
                 </span>
               </a>

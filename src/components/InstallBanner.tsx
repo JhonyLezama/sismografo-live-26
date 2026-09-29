@@ -69,7 +69,7 @@ export default function InstallBanner({ blocked = false }: Props) {
       {visible && (
         <motion.div
           role="dialog"
-          aria-label="Instalar la aplicación Sismógrafo·26"
+          aria-label="Instalar la aplicación Sismógrafo"
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 24 }}
@@ -93,7 +93,7 @@ export default function InstallBanner({ blocked = false }: Props) {
                 </svg>
               </span>
               <div>
-                <div className="font-display text-sm tracking-[0.08em] text-bone">SISMÓGRAFO·26</div>
+                <div className="font-display text-sm tracking-[0.08em] text-bone">SISMÓGRAFO</div>
                 <div className="font-mono text-[9px] tracking-[0.22em] text-amber uppercase">{title}</div>
               </div>
             </div>

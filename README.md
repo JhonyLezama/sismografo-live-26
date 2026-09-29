@@ -1,12 +1,17 @@
 <div align="center">
 
-<img src="public/icon-512.png" alt="Sismógrafo·26" width="120" height="120" />
+<img src="public/icon-512.png" alt="Sismógrafo" width="120" height="120" />
 
-# 📡 SISMÓGRAFO·26
+# 📡 SISMÓGRAFO
 
-Observatorio sísmico interactivo con el catálogo de terremotos de 2026 y la alimentación en vivo del **USGS**. Proyecto académico/visualización: mapa de epicentros (proyección Natural Earth), estadísticas, registro consultable, laboratorio de magnitudes y reproductor temporal.
+**¿Sentiste un temblor?** Observatorio sísmico en vivo: te dice en segundos qué sismo fue, dónde y de qué magnitud, con datos del **USGS** y el **EMSC**. Mapa mundial de epicentros (proyección Natural Earth), archivo 2026 con bitácora y balance, laboratorio de magnitudes y botón **LO SENTÍ** con veredicto por geolocalización.
 
 **PWA instalable · funciona sin conexión**
+
+| En vivo | Escalas |
+| --- | --- |
+| ![Mapa en vivo con ficha de sismo en Indonesia M5.4](public/screenshots/en-vivo.png) | ![Laboratorio de magnitud y escala Mercalli](public/screenshots/escalas.png) |
+| Mapa USGS+EMSC, ficha del evento y botón LO SENTÍ | Un grado no es un grado: energía, Mercalli y simulador |
 
 👨‍💻 **Desarrollado por [SysJoL](https://sysjol.onrender.com/)**
 
@@ -24,38 +29,41 @@ Observatorio sísmico interactivo con el catálogo de terremotos de 2026 y la al
 
 ## ✨ Características
 
-| | Sección | Descripción |
+| | Vista | Descripción |
 | --- | --- | --- |
-| 🗺️ | **01 · El mapa del temblor** | Proyección Natural Earth, zoom y arrastre, marcadores con tamaño/color según magnitud Mw, capas `Local 2026 · USGS En vivo · Ambas`, selección de área arrastrando sobre el mapa y exportación a **PNG/SVG** (9:16 en móvil). |
-| 📡 | **01·B · Pulso en tiempo real** | Sismos M≥4.5 de una ventana configurable (1 h · 24 h · 7 d · 30 d), actualización cada 5 min, caché offline y **alertas** de eventos nuevos M≥6 con sonido opcional (persistido en `localStorage`). **Fuente elegible**: USGS · EMSC · Ambas (en «Ambas» se combinan y deduplican; los eventos solo-EMSC se marcan en violeta). |
-| 🚨 | **01·C · Capa GDACS** | Alertas sísmicas del centro europeo de alertas (GDACS): los eventos **Red/Orange** se marcan en el mapa con pulso y leyenda propia; el snapshot se refresca a diario por el workflow de datos. |
-| 📋 | **02 · Bitácora del año** | Registro completo con buscador (sin acentos), filtros por magnitud/región/mes/profundidad y exportación a CSV/GeoJSON. |
-| ⚖️ | **02·B · Balance** | Contadores del año: eventos M4+, víctimas, sismos M7+, coste estimado y países afectados. |
-| 🧪 | **03 · Cómo se mide** | Equivalencias de energía, réplicas de Mercalli, onda sísmica simulada y sliders de magnitud/profundidad. |
-| 🎞️ | **04 · El año en movimiento** | Reproductor temporal que anima mes a mes los epicentros del catálogo local. |
+| 🟢 | **En vivo** | Hero con veredicto del último sismo + botón **LO SENTÍ** (geolocalización → match por distancia y hora contra USGS/EMSC). Mapa live-only M≥4.5, lista única con ficha en bottom-sheet, señal con fuente elegible (USGS · EMSC · Ambas, deduplicadas), ventana 1 h · 24 h · 7 d · 30 d, refresco cada 5 min, caché offline y **alertas** M≥6 con sonido opcional. **Búsqueda por lugar** (tolera tildes) con chips de países calientes y `?q=` compartible. |
+| 🧪 | **Escalas** | Un grado no es un grado: equivalencias de energía, escala Mercalli, onda simulada y sliders de magnitud/profundidad. |
+| 📦 | **Archivo 2026** | Ficha del periodo, **mapa propio** del catálogo (capas Local/Ambos, `YearPlayer` mes a mes, filtros magnitud/región/mes/profundidad/zona) y **bitácora** ordenable con buscador y exportación CSV/GeoJSON. Tocar una fila ubica el evento en el mapa del archivo. |
+| ⚖️ | **Balance** | Contadores del año: eventos M4+, víctimas, sismos M7+, coste estimado y países afectados. |
+| 🚨 | **Capa GDACS** | Alertas sísmicas Red/Orange marcadas en el mapa con pulso y leyenda propia; snapshot refrescado a diario por el workflow de datos. |
 
-- 🔗 **URL compartible**: `mag`, `region`, `month`, `modo` (local/live/both), `prof` y `zona` (área) se codifican en la URL.
-- 📊 **PAGER en la ficha**: al abrir un evento del catálogo, se consulta el detalle USGS y se muestra la estimación de impacto PAGER (nivel, CDI percibida, testigos, tsunami).
+- 🔗 **URL compartible**: `mag`, `region`, `month`, `modo` (local/both, archivo), `prof`, `zona` (área) y `q` (búsqueda) se codifican en la URL; las vistas son hash (`#en-vivo`, `#escalas`, `#registro`, `#balance`, `#acerca`).
+- 📱 **Tipo app**: sidebar fija en desktop, bottom-tabs en móvil (En vivo · Escalas · LO SENTÍ · Archivo · Más) con una vista por pantalla y sheets para fichas, filtros y opciones.
+- 📊 **PAGER + ShakeMap en la ficha**: detalle USGS con estimación de impacto (nivel, CDI, testigos, tsunami) e imagen de intensidad percibida.
 - 📚 **Sugerencias de Wikipedia**: el workflow de datos propone enlaces a artículos; en la ficha puedes **Aceptar/Descartar** cada sugerencia (recuerdo persistido en `localStorage`).
 - 🧾 **Fuentes citadas**: cada evento del catálogo enlaza sus fuentes oficiales (ficha USGS, informe GDACS) en el bloque **Fuentes citadas** de la ficha; las cifras curadas clave apuntan a su fuente primaria (p. ej. UNGRD en Colombia).
 - 🚀 **Rendimiento**: código dividido con `React.lazy`, mapa memoizado y arrastre/zoom sin re-render por frame en móvil.
-- 📱 **PWA**: instalable desde móvil y escritorio con aviso inteligente (aparece al exportar, seleccionar en el mapa o en visitas recurrentes).
-- 🎨 Diseño oscuro "observatorio" con `Anton` / `Space Grotesk` / `IBM Plex Mono`, revelado por scroll y soporte de `prefers-reduced-motion`.
+- 📱 **PWA**: instalable desde móvil y escritorio (banner inteligente + entrada en Más + shortcuts a En vivo/Archivo), fuentes en caché y shell offline.
+- 🎨 Diseño oscuro "observatorio" con `Anton` / `Space Grotesk` / `IBM Plex Mono` y soporte de `prefers-reduced-motion`.
 
 ## 🗂️ Estructura del proyecto
 
 ```
 src/
-├── App.tsx                    # layout, filtros, URL, alertas en vivo, capa GDACS
+├── App.tsx                    # shell En vivo/Escalas/Archivo/Balance, filtros, URL+hash, alertas, capa GDACS
 ├── hooks.ts                   # useMediaQuery, usePrefersReducedMotion, useInstallPrompt
 ├── installSignals.ts          # señales de interés para el aviso PWA
 ├── main.tsx                   # registro del service worker (producción)
 ├── index.css                  # tema Tailwind v4 + animaciones
 ├── components/
 │   ├── WorldMap.tsx           # mapa d3-geo: epicentros, placas, GDACS, selección, fullscreen
+│   ├── SideNav.tsx            # barra lateral fija (desktop)
+│   ├── BottomTabs.tsx         # barra inferior tipo app + sheet Más (móvil)
+│   ├── FeltSheet.tsx          # veredicto LO SENTÍ (geolocalización + ranking)
+│   ├── SearchBox.tsx          # búsqueda por lugar
 │   ├── InstallBanner.tsx      # aviso de instalación PWA
 │   ├── BottomSheet.tsx        # hoja inferior para móvil
-│   └── …                      # SidePanel, Registry, Balance, MagnitudeLab, YearPlayer…
+│   └── …                      # SidePanel, Registry, Balance, MagnitudeLab, YearPlayer, Ticker…
 └── data/
     ├── quakes.json            # catálogo 2026 (28 eventos, curado) + vínculos USGS
     ├── quakes.ts              # interfaz del catálogo y helpers
@@ -70,8 +78,9 @@ scripts/
 └── update-catalog.mjs         # sincronización diaria USGS/GDACS/Wikipedia + fuentes (--dry-run)
 
 public/
-├── manifest.webmanifest       # manifest PWA (rutas relativas → subpath)
-├── sw.js                      # service worker (cache-first assets, offline shell)
+├── manifest.webmanifest       # manifest PWA (rutas relativas → subpath, shortcuts)
+├── sw.js                      # service worker (cache-first assets, fuentes y shell offline)
+├── screenshots/               # capturas para el README (en-vivo.png, escalas.png)
 ├── gdacs.json                 # snapshot GDACS EQ (Red/Orange/Green) generado por el script
 ├── wikipedia-suggestions.json # enlaces propuestos por el script
 └── icon-*.png                 # iconos generados por scripts/gen-icons.mjs
@@ -124,9 +133,9 @@ Los campos **curados a mano** (fallecidos, heridos, coste, resumen, placas, tag)
 
 ## 🖥️ PWA e instalación
 
-- **Manifest** + **service worker** con rutas relativas al scope, para servir correctamente bajo subpath (GitHub Pages).
-- Estrategia: cache-first para `assets/` (hasheados) y network-first para navegación con volcado a caché.
-- El **aviso de instalación** es inteligente: aparece al exportar el mapa, al seleccionar un sismo en el mapa o en visitas recurrentes (más rápido que la primera visita), con tope de 3 muestras por navegador.
+- **Manifest** + **service worker** con rutas relativas al scope, para servir correctamente bajo subpath (GitHub Pages). Shortcuts a En vivo y Archivo desde el icono instalado.
+- Estrategia: cache-first para `assets/` (hasheados) y fuentes de Google, network-first para navegación con volcado a caché y fallback al shell offline.
+- El **aviso de instalación** es inteligente: aparece al exportar el mapa, al seleccionar un sismo en el mapa o en visitas recurrentes (más rápido que la primera visita), con tope de 3 muestras por navegador. También hay entrada **Instalar app** en el sheet Más (con guía para iOS).
 
 ## 🛠️ Desarrollo
 

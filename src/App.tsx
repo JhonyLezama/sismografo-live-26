@@ -332,13 +332,13 @@ export default function App() {
   /* título por vista + volver arriba al cambiar en móvil */
   useEffect(() => {
     const t: Record<string, string> = {
-      "#en-vivo": "En vivo · Sismógrafo 2026",
-      "#registro": "Archivo 2026 · Sismógrafo 2026",
-      "#escalas": "Escalas · Sismógrafo 2026",
-      "#balance": "Balance 2026 · Sismógrafo 2026",
-      "#acerca": "Acerca y fuentes · Sismógrafo 2026",
+      "#en-vivo": "En vivo · Sismógrafo",
+      "#registro": "Archivo 2026 · Sismógrafo",
+      "#escalas": "Escalas · Sismógrafo",
+      "#balance": "Balance 2026 · Sismógrafo",
+      "#acerca": "Acerca y fuentes · Sismógrafo",
     };
-    document.title = t[hashView] ?? "Sismógrafo 2026 · Observatorio de Terremotos";
+    document.title = t[hashView] ?? "Sismógrafo · Terremotos en vivo";
     if (isMobile) window.scrollTo(0, 0);
   }, [hashView, isMobile]);
 
@@ -712,7 +712,7 @@ export default function App() {
               </svg>
             </span>
             <span className="leading-tight">
-              <span className="block font-display text-lg tracking-[0.08em] text-bone">SISMÓGRAFO·26</span>
+              <span className="block font-display text-lg tracking-[0.08em] text-bone">SISMÓGRAFO</span>
               <span className="block font-mono text-[9px] tracking-[0.28em] text-dim uppercase">Observatorio de terremotos</span>
             </span>
           </a>
@@ -1281,7 +1281,7 @@ export default function App() {
       <footer id="acerca" className="relative z-10 mt-8 scroll-mt-24 border-t border-line bg-deep">
         <div className="mx-auto grid max-w-[1400px] gap-8 px-4 py-12 sm:px-6 md:grid-cols-3">
           <div>
-            <div className="font-display text-xl tracking-wide text-bone">SISMÓGRAFO·26</div>
+            <div className="font-display text-xl tracking-wide text-bone">SISMÓGRAFO</div>
             <p className="mt-3 max-w-sm text-sm leading-relaxed text-fog">
               Observatorio visual de la actividad sísmica mundial en 2026. Las magnitudes provienen de
               catálogos del <a className="text-amber underline-offset-2 hover:underline" href="https://earthquake.usgs.gov" target="_blank" rel="noreferrer">USGS</a> y

@@ -118,7 +118,7 @@ export default function FeltSheet({ open, onClose, live, status, onLocate }: Pro
   const share = async (text: string) => {
     try {
       if (navigator.share) {
-        await navigator.share({ title: "Sismógrafo·26", text, url: window.location.href });
+        await navigator.share({ title: "Sismógrafo", text, url: window.location.href });
         return;
       }
       await navigator.clipboard.writeText(`${text} ${window.location.href}`);
