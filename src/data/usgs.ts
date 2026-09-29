@@ -138,6 +138,7 @@ export interface UsgsDetail {
   url: string;
   place: string | null;
   mag: number | null;
+  shakemapUrl: string | null; // imagen de intensidad (intensity.jpg) si existe
 }
 
 const DETAIL_CACHE = new Map<string, Promise<UsgsDetail | null>>();
@@ -158,6 +159,14 @@ export function fetchUsgsDetail(id: string): Promise<UsgsDetail | null> {
             properties: Record<string, unknown>;
           };
           const p = gj.properties ?? {};
+          const products = (p.products as Record<string, unknown> | undefined) ?? {};
+          const shakemap = Array.isArray(products.shakemap)
+            ? (products.shakemap as { code?: string; source?: string; updateTime?: number }[])[0]
+            : undefined;
+          const shakemapUrl =
+            shakemap?.code && shakemap.source && typeof shakemap.updateTime === "number"
+              ? `https://earthquake.usgs.gov/product/shakemap/${shakemap.code}/${shakemap.source}/${shakemap.updateTime}/download/intensity.jpg`
+              : null;
           return {
             id: gj.id,
             alert: typeof p.alert === "string" ? p.alert : null,
@@ -169,6 +178,7 @@ export function fetchUsgsDetail(id: string): Promise<UsgsDetail | null> {
             url: typeof p.url === "string" ? p.url : "",
             place: typeof p.place === "string" ? p.place : null,
             mag: typeof p.mag === "number" ? p.mag : null,
+            shakemapUrl,
           };
         } catch {
           return null;

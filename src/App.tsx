@@ -3,7 +3,6 @@ import type { Region, Quake } from "./data/quakes";
 import { QUAKES, ANNUAL, fmt, MONTHS_ES, magColor, depthClass, CATALOG_FIRST, CATALOG_LAST } from "./data/quakes";
 import type { MapMode, AreaRect } from "./components/WorldMap";
 import BottomSheet from "./components/BottomSheet";
-import MobileNav from "./components/MobileNav";
 import { fetchLiveQuakes, timeAgo, feedUrl, loadLiveCache, USGS_WINDOWS } from "./data/usgs";
 import type { LiveQuake, LiveWindow } from "./data/usgs";
 import { fetchEmscLive, mergeSources } from "./data/emsc";
@@ -17,6 +16,9 @@ import Seismograph from "./components/Seismograph";
 import YearPlayer from "./components/YearPlayer";
 import InstallBanner from "./components/InstallBanner";
 import Toaster from "./components/Toaster";
+import SideNav from "./components/SideNav";
+import BottomTabs from "./components/BottomTabs";
+import FeltSheet from "./components/FeltSheet";
 import { useScramble, useUtcClock, useReveal, usePrefersReducedMotion, useMediaQuery } from "./hooks";
 
 /* secciones pesadas cargadas bajo demanda (código dividido por chunks) */
@@ -77,19 +79,21 @@ const readUrl = () => {
       ? (region as (typeof REGIONS)[number])
       : "Todas",
     month: m >= -1 && m <= 7 ? m : -1,
-    mapMode: (modo === "live" || modo === "both" || modo === "local" ? modo : "local") as MapMode,
+    mapMode: (modo === "both" || modo === "local" ? modo : "local") as MapMode,
     depth: (prof === "sup" || prof === "int" || prof === "deep" ? prof : "all") as DepthFilter,
     area,
   };
 };
 
 const NAV: [string, string][] = [
-  ["#mapa", "Mapa"],
   ["#en-vivo", "En vivo"],
-  ["#registro", "Registro"],
   ["#escalas", "Escalas"],
+  ["#registro", "Archivo"],
   ["#balance", "Balance"],
 ];
+
+/* hash legacy #mapa redirige a la vista única en vivo */
+const normHash = (h: string) => (h === "#mapa" ? "#en-vivo" : h || "#en-vivo");
 
 /* alerta sonora para sismos grandes (Web Audio, sin archivos) */
 let audioCtx: AudioContext | null = null;
@@ -185,8 +189,8 @@ export default function App() {
   const [depth, setDepth] = useState<DepthFilter>(urlInit.depth);
   const [area, setArea] = useState<AreaRect | null>(urlInit.area ?? null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [feltOpen, setFeltOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<string>(NAV[0][0]);
 
   /* scroll-spy: resalta en la navegación la sección visible */
@@ -306,11 +310,37 @@ export default function App() {
 
   const reduced = usePrefersReducedMotion();
   const isMobile = useMediaQuery("(max-width: 1023px)");
+  const isDesktop = !isMobile;
   const mapSecRef = useRef<HTMLDivElement | null>(null);
+
+  /* vista móvil por hash: una sección a la vez, cero scroll largo (desktop intacto) */
+  const [hashView, setHashView] = useState<string>(() => normHash(window.location.hash));
+  useEffect(() => {
+    const onHash = () => setHashView(normHash(window.location.hash));
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+  const showSection = (h: string) => isDesktop || hashView === h;
+  /* en móvil las vistas montan arriba del todo: visibles directo, sin animación de reveal */
+  const rvView = isMobile ? "rv rv-on" : "rv";
+
+  /* título por vista + volver arriba al cambiar en móvil */
+  useEffect(() => {
+    const t: Record<string, string> = {
+      "#en-vivo": "En vivo · Sismógrafo 2026",
+      "#registro": "Archivo 2026 · Sismógrafo 2026",
+      "#escalas": "Escalas · Sismógrafo 2026",
+      "#balance": "Balance 2026 · Sismógrafo 2026",
+      "#acerca": "Acerca y fuentes · Sismógrafo 2026",
+    };
+    document.title = t[hashView] ?? "Sismógrafo 2026 · Observatorio de Terremotos";
+    if (isMobile) window.scrollTo(0, 0);
+  }, [hashView, isMobile]);
 
   const introRef = useReveal<HTMLDivElement>();
   const dashRef = useReveal<HTMLDivElement>();
   const regRef = useReveal<HTMLDivElement>();
+  const archiveDashRef = useReveal<HTMLDivElement>();
   const labRef = useReveal<HTMLDivElement>();
   const balRef = useReveal<HTMLDivElement>();
 
@@ -411,10 +441,17 @@ export default function App() {
 
   const pickFromTable = (q: Quake) => {
     setSelectedId(q.id);
-    mapSecRef.current?.scrollIntoView({
-      behavior: reduced ? "auto" : "smooth",
-      block: "center",
-    });
+    const goMap = () =>
+      mapSecRef.current?.scrollIntoView({
+        behavior: reduced ? "auto" : "smooth",
+        block: "center",
+      });
+    if (isMobile && hashView !== "#en-vivo") {
+      window.location.hash = "#en-vivo";
+      window.setTimeout(goMap, 150);
+    } else {
+      goMap();
+    }
   };
 
   const liveMax = filteredLive.reduce((m, q) => Math.max(m, q.mag), 0);
@@ -426,7 +463,7 @@ export default function App() {
   const sheetLocal = !sheetLive && selectedId ? visibleQuakes.find((q) => q.id === selectedId) ?? null : null;
 
   const filterSummary = [
-    mapMode === "live" ? "en vivo" : null,
+    mapMode === "both" ? "ambos" : null,
     minMag > 0 ? `M≥${minMag}` : null,
     region !== "Todas" ? region : null,
     month >= 0 ? MONTHS_ES[month] : null,
@@ -445,8 +482,25 @@ export default function App() {
     ? `${captionParts.filter(Boolean).join(" · ")} · ${modeCount} EVENTOS`
     : null;
 
+  /* resumen y caption de la vista en vivo (sin región ni mes: son del archivo) */
+  const liveFilterSummary = [
+    minMag > 0 ? `M≥${minMag}` : null,
+    depth !== "all" ? DEPTH_LABEL[depth] : null,
+    area ? "zona" : null,
+  ].filter(Boolean) as string[];
+  const liveCaptionParts = [
+    minMag > 0 ? `M≥${minMag}` : null,
+    depth !== "all" ? DEPTH_LABEL[depth] : null,
+    area ? "zona" : null,
+  ];
+  const liveCaption = liveCaptionParts.some(Boolean)
+    ? `${liveCaptionParts.filter(Boolean).join(" · ")} · ${filteredLive.length} EN VIVO`
+    : null;
+
+  const [filtersFor, setFiltersFor] = useState<"live" | "archive">("live");
+
   const renderFilters = useCallback(
-    (_compact: boolean) => {
+    (_compact: boolean, liveOnly = false) => {
     const d = (v: string) => (_compact ? "" : v);
     return (
     <div className={`grid grid-cols-2 items-stretch gap-x-3 gap-y-3 ${d("md:grid-cols-12 md:items-center md:gap-3")}`}>
@@ -467,14 +521,13 @@ export default function App() {
           ))}
         </div>
       </div>
-      {/* Región */}
+      {/* Región (solo archivo 2026) */}
+      {!liveOnly && (
       <div className={`flex min-w-0 flex-col gap-1.5 ${d("md:col-span-6 lg:col-span-2 md:flex-row md:items-center md:gap-3")}`}>
-        <span className={`font-mono text-[10px] tracking-[0.2em] uppercase ${mapMode === "live" ? "text-dim/60" : "text-dim"}`}>Región</span>
+        <span className="font-mono text-[10px] tracking-[0.2em] text-dim uppercase">Región</span>
         <select
           value={region}
-          disabled={mapMode === "live"}
           onChange={(e) => setRegion(e.target.value as (typeof REGIONS)[number])}
-          title={mapMode === "live" ? "La región solo filtra el catálogo 2026 — cámbiate a Local o Ambos" : undefined}
           className="w-full min-w-0 chip-btn border border-line bg-panel px-3 py-1.5 font-mono text-xs text-bone outline-none hover:border-fog disabled:cursor-not-allowed disabled:opacity-40 md:w-auto"
         >
           {REGIONS.map((r) => (
@@ -482,14 +535,14 @@ export default function App() {
           ))}
         </select>
       </div>
-      {/* Mes */}
+      )}
+      {/* Mes (solo archivo 2026) */}
+      {!liveOnly && (
       <div className={`flex min-w-0 flex-col gap-1.5 ${d("md:col-span-6 lg:col-span-3 md:flex-row md:items-center md:gap-3")}`}>
-        <span className={`font-mono text-[10px] tracking-[0.2em] uppercase ${mapMode === "live" ? "text-dim/60" : "text-dim"}`}>Mes</span>
+        <span className="font-mono text-[10px] tracking-[0.2em] text-dim uppercase">Mes</span>
         <select
           value={month}
-          disabled={mapMode === "live"}
           onChange={(e) => setMonth(Number(e.target.value))}
-          title={mapMode === "live" ? "El mes no aplica al feed en vivo (ventana móvil)" : undefined}
           className="w-full min-w-0 chip-btn border border-line bg-panel px-3 py-1.5 font-mono text-xs text-bone outline-none hover:border-fog disabled:cursor-not-allowed disabled:opacity-40 md:w-auto"
         >
           <option value={-1}>Todo el año</option>
@@ -498,6 +551,7 @@ export default function App() {
           ))}
         </select>
       </div>
+      )}
       {/* Profundidad */}
       <div className={`col-span-2 flex flex-col gap-1.5 ${d("md:col-span-12 lg:col-span-7 md:flex-row md:items-center md:gap-3")}`}>
         <span className="font-mono text-[10px] tracking-[0.2em] text-dim uppercase">Profundidad</span>
@@ -515,14 +569,14 @@ export default function App() {
           ))}
         </div>
       </div>
-      {/* Capa + contador + refresco */}
+      {/* Capa del archivo + contador + refresco (en vivo es siempre live) */}
       <div className={`col-span-2 flex flex-col gap-1.5 ${d("md:col-span-12 lg:col-span-5 md:flex-row md:items-center md:gap-3")}`}>
-        <span className="font-mono text-[10px] tracking-[0.2em] text-dim uppercase md:hidden">Capa</span>
+        {!liveOnly && <span className="font-mono text-[10px] tracking-[0.2em] text-dim uppercase md:hidden">Capa</span>}
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
-          <div className="grid w-full grid-cols-3 overflow-hidden border border-line sm:min-w-[170px] sm:flex-1" role="group" aria-label="Capa de datos del mapa">
+          {!liveOnly && (
+          <div className="grid w-full grid-cols-2 overflow-hidden border border-line sm:min-w-[170px] sm:flex-1" role="group" aria-label="Capa de datos del mapa">
             {[
               { m: "local", l: "2026 · Local" },
-              { m: "live", l: "USGS · En vivo" },
               { m: "both", l: "Ambos" },
             ].map((o) => (
               <button
@@ -532,9 +586,7 @@ export default function App() {
                 title={
                   o.m === "local"
                     ? "Catálogo 2026 con datos locales"
-                    : o.m === "live"
-                      ? "Sismos reales del USGS (últimos 30 días), filtrados por magnitud, profundidad y zona"
-                      : "Ambas capas superpuestas"
+                    : "Ambas capas superpuestas"
                 }
                 className={`chip-btn flex min-w-0 items-center justify-center gap-1 overflow-hidden px-1 py-1.5 font-mono text-[10px] uppercase transition-colors sm:px-3 sm:text-[11px] ${
                   mapMode === o.m
@@ -543,7 +595,7 @@ export default function App() {
                 }`}
               >
                 <span className="sm:hidden">
-                  {o.m === "live" ? "En vivo" : o.m === "local" ? "Local" : "Ambos"}
+                  {o.m === "local" ? "Local" : "Ambos"}
                 </span>
                 <span className="hidden min-w-0 truncate sm:inline">{o.l}</span>
                 {o.m !== "local" && (
@@ -554,6 +606,7 @@ export default function App() {
               </button>
             ))}
           </div>
+          )}
           <div className="flex items-center justify-between gap-2 sm:justify-start">
             <span className="border border-line bg-panel px-2.5 py-1.5 font-mono text-[10px] tracking-widest text-jade sm:text-[11px]">
               {modeCount} EVENTOS
@@ -586,11 +639,12 @@ export default function App() {
     [minMag, region, month, depth, mapMode, liveStatus, filtered, filteredLive, refreshLive, selectMapMode]
   );
 
-  /* barra de filtros dentro del mapa (identidad estable para memoizar WorldMap) */
-  const fullscreenBar = useMemo(() => renderFilters(true), [renderFilters]);
+  /* barras de filtros dentro del mapa (identidad estable para memoizar WorldMap) */
+  const fullscreenBar = useMemo(() => renderFilters(true, true), [renderFilters]);
+  const archiveFullscreenBar = useMemo(() => renderFilters(true, false), [renderFilters]);
 
   return (
-    <div className="relative min-h-screen">
+    <div className="relative min-h-screen pb-20 lg:pb-0 lg:pl-56">
       <div className="backdrop-grid" aria-hidden />
       <div className="backdrop-noise" aria-hidden />
 
@@ -627,157 +681,99 @@ export default function App() {
               EN VIVO
             </span>
             <span className="font-mono text-xs font-semibold tracking-widest text-amber"><Clock /></span>
-            <button
-              onClick={() => setMenuOpen((v) => !v)}
-              aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
-              aria-expanded={menuOpen}
-              className="chip-btn grid h-9 w-9 place-items-center border border-line bg-panel text-fog hover:border-amber hover:text-amber md:hidden"
-            >
-              {menuOpen ? (
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                  <path d="M3 3l10 10M13 3L3 13" />
-                </svg>
-              ) : (
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                  <path d="M2 4h12M2 8h12M2 12h12" />
-                </svg>
-              )}
-            </button>
           </div>
         </div>
       </header>
 
-      <MobileNav open={menuOpen} onClose={() => setMenuOpen(false)} items={NAV} active={activeSection} />
+      <SideNav active={activeSection} onFelt={() => setFeltOpen(true)} liveCount={liveStatus === "ok" ? filteredLive.length : null} />
 
-      <Ticker quakes={QUAKES} />
+      <Ticker quakes={QUAKES} live={liveQuakes} liveStatus={liveStatus} />
 
-      {/* ---------- apertura ---------- */}
+      {/* ---------- apertura (móvil: solo en vista En vivo) ---------- */}
+      {showSection("#en-vivo") && (
       <section className="relative z-10 mx-auto max-w-[1400px] px-4 pt-12 pb-10 sm:px-6 sm:pt-16">
-        <div ref={introRef} className="rv grid grid-cols-1 gap-10 lg:grid-cols-12">
-          <div className="lg:col-span-7">
-            <div className="flex items-center gap-3 font-mono text-[11px] tracking-[0.24em] text-amber uppercase">
-              <span className="inline-block h-px w-10 bg-amber" />
-              Temporada sísmica · {ANNUAL.period}
+        <div ref={introRef} className={`${rvView} max-w-3xl`}>
+          <div>
+            <div className="flex items-center gap-3 font-mono text-[11px] tracking-[0.24em] text-teal uppercase">
+              <span className="relative flex h-2 w-2">
+                <span className="ping-slow absolute inline-flex h-full w-full rounded-full bg-teal opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-teal" />
+              </span>
+              En vivo · USGS + EMSC{liveStatus === "ok" && liveUpdated ? ` · act. ${timeAgo(liveUpdated)}` : liveStatus === "loading" ? " · sintonizando…" : " · sin señal"}
             </div>
             <h1 className="mt-5 font-display leading-[0.9] tracking-wide">
-              <ScrambleLine text="LA TIERRA TEMBLÓ" className="block text-[clamp(3rem,8.5vw,7.5rem)] text-bone" />
-              <ScrambleLine text="8.462 VECES" className="block text-[clamp(3rem,8.5vw,7.5rem)] text-verm" />
+              <ScrambleLine text="¿SENTISTE" className="block text-[clamp(3rem,8.5vw,7.5rem)] text-bone" />
+              <ScrambleLine text="UN TEMBLOR?" className="block text-[clamp(3rem,8.5vw,7.5rem)] text-verm" />
             </h1>
-            <p className="mt-6 max-w-xl text-[15px] leading-relaxed text-fog">
-              De la doble sacudida de <strong className="text-bone">Venezuela</strong> al megasismo de{" "}
-              <strong className="text-bone">Mindanao</strong>: todos los epicentros relevantes registrados en el
-              mundo en 2026, con su magnitud, intensidad, víctimas y costo estimado. Haz clic en cualquier
-              punto del mapa para abrir su ficha.
-            </p>
-            <div className="mt-8 grid grid-cols-3 gap-3 sm:flex sm:flex-wrap sm:gap-3">
-              {[
-                { v: fmt(ANNUAL.deaths), l: "víctimas fatales", c: "#f0603c" },
-                { v: String(ANNUAL.m7), l: "sismos M7 o más", c: "#f59e42" },
-                { v: "M7.8", l: "máxima magnitud", c: "#e23a62" },
-              ].map((s, i) => (
-                <div key={s.l} className={`rv rv-d${i + 1} min-w-0 border border-line bg-panel px-2 py-3 sm:px-5`}>
-                  <div className="font-display text-2xl leading-none sm:text-3xl" style={{ color: s.c }}>{s.v}</div>
-                  <div className="mt-1 font-mono text-[9px] leading-snug tracking-[0.2em] text-dim uppercase break-words">{s.l}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* ficha del periodo */}
-          <div className="rv rv-d2 lg:col-span-5">
-            <div className="border border-line bg-panel">
-              <div className="flex items-center justify-between border-b border-line px-5 py-3">
-                <span className="font-mono text-[10px] tracking-[0.24em] text-dim uppercase">Ficha del periodo</span>
-                <span className="drift-y font-mono text-[10px] tracking-widest text-jade">▲ 28 DESTACADOS</span>
-              </div>
-              <table className="w-full border-collapse">
-                <tbody>
-                  {[
-                    ["Periodo cubierto", ANNUAL.period],
-                    ["Registros M4 o más", fmt(ANNUAL.totalM4)],
-                    ["Sismos M6 — M7.9", `${ANNUAL.m6 + ANNUAL.m7} (${ANNUAL.m7} de M7+)`],
-                    ["Más fuerte", "M7.8 · Mindanao, Filipinas"],
-                    ["Más mortífero", "Venezuela · 6.301 fallecidos"],
-                    ["En el Anillo de Fuego", "10 de 11 sismos M7+"],
-                  ].map(([k, v]) => (
-                    <tr key={k} className="border-b border-line/60 last:border-0">
-                      <td className="px-5 py-3 align-baseline font-mono text-[10px] tracking-[0.18em] text-dim uppercase">{k}</td>
-                      <td className="px-5 py-3 text-right text-sm font-semibold text-bone">{v}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="border-t border-line px-5 py-3">
-                <div className="mb-1 font-mono text-[9px] tracking-[0.22em] text-dim uppercase">Onda sísmica · simulación</div>
-                <Seismograph amp={0.45} seed={26} height={54} color="#3ec9a7" />
-              </div>
-            </div>
-
-            {/* resumen en vivo · USGS (se actualiza solo cada 5 min) */}
-            <div className="mt-4 border border-teal/40 bg-panel">
-              <div className="flex items-center justify-between border-b border-teal/30 bg-deep/60 px-5 py-3">
-                <span className="flex items-center gap-2 font-mono text-[10px] tracking-[0.22em] text-teal uppercase">
-                  <span className="relative flex h-2 w-2">
-                    <span className="ping-slow absolute inline-flex h-full w-full rounded-full bg-teal opacity-75" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-teal" />
+            {liveStatus === "ok" && latest ? (
+              <button
+                onClick={() => {
+                  setLiveSel(latest.id);
+                  setSelectedId(null);
+                  mapSecRef.current?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+                }}
+                className="row-hover mt-6 flex w-full max-w-xl items-center gap-4 border border-teal/40 bg-panel px-4 py-3 text-left"
+              >
+                <span
+                  className="grid h-11 w-16 shrink-0 place-items-center border font-display text-xl"
+                  style={{ color: magColor(latest.mag), borderColor: `${magColor(latest.mag)}55`, background: `${magColor(latest.mag)}12` }}
+                >
+                  {latest.mag.toFixed(1)}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold text-bone">{latest.place}</span>
+                  <span className="block font-mono text-[11px] tracking-wider text-teal uppercase">
+                    Último sismo · {timeAgo(latest.time)} · toca para ubicar
                   </span>
-                  Resumen en vivo · USGS
                 </span>
-                <span className={`font-mono text-[9px] tracking-widest uppercase ${liveStale ? "text-amber" : "text-dim"}`}>
-                  {liveStatus === "ok"
-                    ? liveStale
-                      ? `caché · ${timeAgo(liveUpdated ?? Date.now())}`
-                      : `act. ${timeAgo(liveUpdated ?? Date.now())}`
-                    : liveStatus === "loading"
-                      ? "sincronizando…"
-                      : "sin señal"}
-                </span>
-              </div>
-              {liveStatus === "ok" ? (
-                <table className="w-full border-collapse">
-                  <tbody>
-                    {[
-                      ["Sismos M4.5+ (30 d)", String(liveQuakes.length)],
-                      ["Máxima magnitud", `M${liveMax.toFixed(1)}`],
-                      ["Último evento", latest ? latest.place : "—"],
-                      ["Países y territorios", String(liveCountries)],
-                      ["Alertas de tsunami", String(liveTsunami)],
-                    ].map(([k, v]) => (
-                      <tr key={k} className="border-b border-line/60 last:border-0">
-                        <td className="px-5 py-2.5 align-baseline font-mono text-[10px] tracking-[0.18em] text-dim uppercase">{k}</td>
-                        <td className="px-5 py-2.5 text-right text-sm font-semibold break-words text-bone">{v}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : liveStatus === "loading" ? (
-                <div className="space-y-3 p-5">
-                  {[0, 1, 2, 3].map((i) => (
-                    <div key={i} className="pulse-soft h-4 border border-line bg-deep" style={{ animationDelay: `${i * 120}ms` }} />
-                  ))}
-                </div>
-              ) : (
-                <p className="px-5 py-6 text-center font-mono text-[10px] tracking-[0.18em] text-dim uppercase">
-                  Señal interrumpida — pulsa ↻ para reintentar
-                </p>
-              )}
+              </button>
+            ) : liveStatus === "loading" ? (
+              <div className="pulse-soft mt-6 h-[68px] w-full max-w-xl border border-line bg-panel" />
+            ) : (
+              <p className="mt-6 max-w-xl border border-verm/50 bg-verm/10 px-4 py-3 font-mono text-[11px] tracking-[0.18em] text-verm uppercase">
+                Sin señal en vivo — pulsa ↻ para reintentar
+              </p>
+            )}
+            <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-fog">
+              Te decimos en segundos si lo que sentiste ya está registrado, dónde fue y de qué magnitud.
+              En la vista Archivo tienes el mapa, la bitácora y el balance de 2026.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <button
+                onClick={() => setFeltOpen(true)}
+                className="chip-btn bg-verm px-6 py-3 font-mono text-xs font-semibold tracking-[0.2em] text-abyss uppercase hover:brightness-110"
+              >
+                ● Lo sentí — ¿qué fue?
+              </button>
+              <a
+                href="#en-vivo"
+                className="chip-btn border border-line bg-panel px-6 py-3 font-mono text-xs tracking-[0.2em] text-fog uppercase hover:border-teal hover:text-teal"
+              >
+                Ver mapa en vivo
+              </a>
             </div>
           </div>
+
         </div>
       </section>
+      )}
 
       {/* ---------- 01 mapa ---------- */}
-      <section id="mapa" ref={mapSecRef} className="relative z-10 mx-auto max-w-[1400px] scroll-mt-24 px-4 py-12 sm:px-6">
+      {showSection("#en-vivo") && (
+      <section ref={mapSecRef} className="relative z-10 mx-auto max-w-[1400px] scroll-mt-24 px-4 py-12 sm:px-6">
         <SectionHead
-          num="01 · Epicentros"
+          num="01 · En vivo"
           title="EL MAPA DEL TEMBLOR"
-          sub={`Proyección Natural Earth con los epicentros del catálogo 2026 (${CATALOG_FIRST} – ${CATALOG_LAST}). El tamaño y el color de cada punto siguen la magnitud de momento (Mw). Rueda para hacer zoom, arrastra para moverte.`}
+          sub="Sismos reales de los últimos 30 días (USGS + EMSC): cada punto con retícula es un evento reciente. Toca uno para abrir su ficha. El catálogo 2026 vive en Archivo."
         />
 
-        <div ref={dashRef} className="rv mb-5 hidden lg:block">{renderFilters(false)}</div>
+        <div ref={dashRef} className="rv mb-5 hidden lg:block">{renderFilters(false, true)}</div>
 
         <button
-          onClick={() => setFiltersOpen(true)}
+          onClick={() => {
+            setFiltersFor("live");
+            setFiltersOpen(true);
+          }}
           aria-label="Abrir filtros"
           className="chip-btn mb-5 flex w-full items-center justify-between gap-3 border border-line bg-panel px-4 py-3 text-left lg:hidden"
         >
@@ -786,9 +782,9 @@ export default function App() {
               <path d="M2 4h12M4.5 8h7M7 12h2" />
             </svg>
             Filtros
-            {filterSummary.length > 0 && (
+            {liveFilterSummary.length > 0 && (
               <span className="border border-amber/40 bg-amber/10 px-1.5 py-0.5 font-mono text-[10px] tracking-wider text-amber">
-                {filterSummary.join(" · ")}
+                {liveFilterSummary.join(" · ")}
               </span>
             )}
           </span>
@@ -797,37 +793,22 @@ export default function App() {
           </svg>
         </button>
 
-        <YearPlayer
-          playing={timePlay}
-          month={timeMonth}
-          disabled={month !== -1 || mapMode === "live"}
-          disabledHint={
-            mapMode === "live"
-              ? "El reproductor anima solo el catálogo 2026 — usa la capa Local o Ambos"
-              : "Desactiva el filtro de mes para reproducir"
-          }
-          count={visibleQuakes.length}
-          onPlayPause={togglePlayer}
-          onSeek={setTimeMonth}
-          onReset={resetPlayer}
-        />
-
         <div className="grid grid-cols-1 gap-4 lg:h-[620px] lg:grid-cols-12">
           <div className="h-[65vh] min-h-[340px] max-h-[580px] sm:h-[500px] lg:col-span-7 lg:h-full">
             <Suspense fallback={<MapSkeleton />}>
               <WorldMap
-                quakes={filtered}
+                quakes={[]}
                 selectedId={selectedId}
                 onSelect={onSelect}
                 liveQuakes={filteredLive}
-                mode={mapMode}
+                mode="live"
                 liveSource={liveSource}
                 liveSelectedId={liveSel}
                 onSelectLive={onSelectLive}
                 gdacs={gdacsAlerts}
-                caption={caption}
+                caption={liveCaption}
                 fullscreenBar={fullscreenBar}
-                maxMonth={timeMonth}
+                maxMonth={-1}
                 areaFilter={area}
                 onAreaChange={setArea}
               />
@@ -840,56 +821,21 @@ export default function App() {
                   q={filteredLive.find((q) => q.id === liveSel)!}
                   onClose={() => setLiveSel(null)}
                 />
-              ) : mapMode === "live" ? (
-                <LiveList quakes={filteredLive} onSelect={setLiveSel} alertIds={new Set(liveAlerts.map((a) => a.id))} />
               ) : (
-                <SidePanel quakes={visibleQuakes} selectedId={selectedId} onSelect={setSelectedId} />
+                <LiveList quakes={filteredLive} onSelect={setLiveSel} alertIds={new Set(liveAlerts.map((a) => a.id))} />
               )}
             </Suspense>
           </div>
         </div>
 
-        {/* ficha de sismo en móvil */}
-        <BottomSheet
-          open={isMobile && (sheetLive !== null || sheetLocal !== null)}
-          onClose={() => {
-            setLiveSel(null);
-            setSelectedId(null);
-          }}
-        >
-          <Suspense fallback={<div className="pulse-soft mx-4 mt-2 h-24 border border-line bg-deep" />}>
-            {sheetLive ? (
-              <LiveDetail q={sheetLive} onClose={() => setLiveSel(null)} />
-            ) : sheetLocal ? (
-              <Detail q={sheetLocal} onClose={() => setSelectedId(null)} />
-            ) : null}
-          </Suspense>
-        </BottomSheet>
-
-        {/* filtros en móvil */}
-        <BottomSheet open={isMobile && filtersOpen} onClose={() => setFiltersOpen(false)} maxHeight="78dvh">
-          <div className="px-4 pt-1">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="font-mono text-[10px] tracking-[0.24em] text-dim uppercase">Filtros del mapa</span>
-              <button
-                onClick={() => setFiltersOpen(false)}
-                aria-label="Cerrar filtros"
-                className="chip-btn grid h-8 w-8 place-items-center border border-line text-fog hover:border-verm hover:text-verm"
-              >
-                <svg width="14" height="14" viewBox="0 0 14 14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                  <path d="M2 2l10 10M12 2L2 12" />
-                </svg>
-              </button>
-            </div>
-            {renderFilters(true)}
-          </div>
-        </BottomSheet>
       </section>
+      )}
 
       {/* ---------- 01b en vivo ---------- */}
+      {showSection("#en-vivo") && (
       <section id="en-vivo" className="relative z-10 mx-auto max-w-[1400px] scroll-mt-24 px-4 py-12 sm:px-6">
         <SectionHead
-          num="01·B · Alimentación en vivo"
+          num="02 · Señal en vivo"
           title="PULSO EN TIEMPO REAL"
           sub="Conexión directa a las API abiertas del USGS Earthquake Hazards Program y del EMSC (European-Mediterranean Seismological Centre): cada sismo de magnitud 4.5 o mayor registrado en el mundo, sin claves ni intermediarios. Puedes elegir la fuente (USGS · EMSC · Ambas); en «Ambas» se combinan y deduplican."
         />
@@ -909,7 +855,7 @@ export default function App() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
+          <div className="grid grid-cols-1 gap-4">
             {/* estado del feed */}
             <div className="border border-teal/40 bg-panel">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-teal/30 bg-deep/60 px-4 py-3 sm:px-5">
@@ -1027,90 +973,157 @@ export default function App() {
               )}
             </div>
 
-            {/* últimos eventos */}
-            <div className="border border-line bg-panel">
-              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-line bg-deep/60 px-4 py-3 sm:px-5">
-                <span className="min-w-0 font-mono text-[10px] tracking-[0.22em] text-dim uppercase">
-                  Últimos eventos · clic para ubicar en el mapa
-                </span>
-                <span className="shrink-0 font-mono text-[10px] tracking-widest text-teal">
-                  {liveStatus === "ok" ? `MOSTRANDO ${Math.min(12, filteredLive.length)} DE ${filteredLive.length}` : ""}
-                </span>
-              </div>
-              {liveStatus === "loading" ? (
-                <div className="space-y-2 p-5">
-                  {[0, 1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="pulse-soft h-9 border border-line bg-deep" style={{ animationDelay: `${i * 120}ms` }} />
-                  ))}
-                </div>
-              ) : (
-                <ul className="divide-y divide-line/60">
-                  {filteredLive.slice(0, 12).map((q) => {
-                    const alert = liveAlerts.some((a) => a.id === q.id);
-                    return (
-                    <li key={q.id} className={alert ? "min-w-0 border-l-2 border-l-verm bg-verm/5" : "min-w-0"}>
-                      <button
-                        onClick={() => {
-                          setLiveSel(q.id);
-                          setSelectedId(null);
-                          if (alert) setLiveAlerts((cur) => cur.filter((a) => a.id !== q.id));
-                          mapSecRef.current?.scrollIntoView({
-                            behavior: reduced ? "auto" : "smooth",
-                            block: "start",
-                          });
-                        }}
-                        className="row-hover group flex min-w-0 w-full items-center gap-4 px-4 py-2.5 text-left sm:px-5"
-                      >
-                        <span className="block w-16 shrink-0 truncate font-mono text-[11px] tracking-wider text-dim">
-                          {timeAgo(q.time).replace("hace ", "")}
-                        </span>
-                        <span
-                          className="grid h-9 w-12 shrink-0 place-items-center border font-display text-lg"
-                          style={{ color: magColor(q.mag), borderColor: `${magColor(q.mag)}55`, background: `${magColor(q.mag)}12` }}
-                        >
-                          {q.mag.toFixed(1)}
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-semibold text-bone">
-                            {q.place}
-                            {alert && <span className="ml-2 font-mono text-[9px] tracking-widest text-verm uppercase">· ⚠ NUEVO</span>}
-                          </span>
-                          <span className="block font-mono text-[10px] tracking-wider text-dim">
-                            {q.depth} km prof. · sig {q.sig}
-                            {q.tsunami && <span className="text-verm"> · ⚠ tsunami</span>}
-                          </span>
-                        </span>
-                        <svg
-                          width="14"
-                          height="14"
-                          viewBox="0 0 14 14"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.6"
-                          strokeLinecap="round"
-                          className="shrink-0 text-dim transition-all group-hover:translate-x-1 group-hover:text-teal"
-                        >
-                          <path d="M2 7h9M8 3.5L11.5 7 8 10.5" />
-                        </svg>
-                      </button>
-                    </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
+            <p className="font-mono text-[10px] leading-relaxed tracking-wider text-dim uppercase">
+              La lista completa vive junto al mapa de arriba: toca cualquier evento para ubicarlo y abrir su ficha.
+            </p>
           </div>
         )}
       </section>
+      )}
 
-      {/* ---------- 02 registro ---------- */}
+      {/* ---------- 03 escalas ---------- */}
+      {showSection("#escalas") && (
+      <section id="escalas" className="relative z-10 mx-auto max-w-[1400px] scroll-mt-24 px-4 py-12 sm:px-6">
+        <div ref={labRef} className={rvView}>
+          <Suspense fallback={<SectionSkeleton />}>
+            <MagnitudeLab />
+          </Suspense>
+        </div>
+      </section>
+      )}
+
+      {/* ---------- 04 archivo ---------- */}
+      {showSection("#registro") && (
       <section id="registro" className="relative z-10 mx-auto max-w-[1400px] scroll-mt-24 px-4 py-12 sm:px-6">
-        <div ref={regRef} className="rv">
+        <div ref={regRef} className={rvView}>
           <SectionHead
-            num="02 · Registro completo"
-            title="BITÁCORA DEL AÑO"
-            sub={`Los eventos destacados del catálogo 2026 (${CATALOG_FIRST} – ${CATALOG_LAST}), ordenables por fecha, magnitud, profundidad, víctimas o costo. Toca una fila para localizarla en el mapa.`}
+            num="04 · Archivo 2026"
+            title="ARCHIVO 2026"
+            sub={`Temporada sísmica ${ANNUAL.period}: mapa del catálogo (${CATALOG_FIRST} – ${CATALOG_LAST}), ficha del periodo y bitácora ordenable. Toca un punto o una fila para localizarlo.`}
           />
+
+          {/* balance rápido del año */}
+          <div className="mb-8 grid grid-cols-1 gap-4 lg:grid-cols-12">
+            <div className="grid grid-cols-3 content-start gap-3 sm:flex sm:flex-wrap sm:gap-3 lg:col-span-5">
+              {[
+                { v: fmt(ANNUAL.deaths), l: "víctimas fatales", c: "#f0603c" },
+                { v: String(ANNUAL.m7), l: "sismos M7 o más", c: "#f59e42" },
+                { v: "M7.8", l: "máxima magnitud", c: "#e23a62" },
+              ].map((s) => (
+                <div key={s.l} className="min-w-0 border border-line bg-panel px-2 py-3 sm:px-5">
+                  <div className="font-display text-2xl leading-none sm:text-3xl" style={{ color: s.c }}>{s.v}</div>
+                  <div className="mt-1 font-mono text-[9px] leading-snug tracking-[0.2em] text-dim uppercase break-words">{s.l}</div>
+                </div>
+              ))}
+            </div>
+            <div className="border border-line bg-panel lg:col-span-7">
+              <div className="flex items-center justify-between border-b border-line px-5 py-3">
+                <span className="font-mono text-[10px] tracking-[0.24em] text-dim uppercase">Ficha del periodo</span>
+                <span className="drift-y font-mono text-[10px] tracking-widest text-jade">▲ 28 DESTACADOS</span>
+              </div>
+              <table className="w-full border-collapse">
+                <tbody>
+                  {[
+                    ["Periodo cubierto", ANNUAL.period],
+                    ["Registros M4 o más", fmt(ANNUAL.totalM4)],
+                    ["Sismos M6 — M7.9", `${ANNUAL.m6 + ANNUAL.m7} (${ANNUAL.m7} de M7+)`],
+                    ["Más fuerte", "M7.8 · Mindanao, Filipinas"],
+                    ["Más mortífero", "Venezuela · 6.301 fallecidos"],
+                    ["En el Anillo de Fuego", "10 de 11 sismos M7+"],
+                  ].map(([k, v]) => (
+                    <tr key={k} className="border-b border-line/60 last:border-0">
+                      <td className="px-5 py-3 align-baseline font-mono text-[10px] tracking-[0.18em] text-dim uppercase">{k}</td>
+                      <td className="px-5 py-3 text-right text-sm font-semibold text-bone">{v}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="border-t border-line px-5 py-3">
+                <div className="mb-1 font-mono text-[9px] tracking-[0.22em] text-dim uppercase">Onda sísmica · simulación</div>
+                <Seismograph amp={0.45} seed={26} height={54} color="#3ec9a7" />
+              </div>
+            </div>
+          </div>
+
+          {/* mapa del archivo */}
+          <div className="mb-4 font-mono text-[11px] tracking-[0.24em] text-amber uppercase">
+            <span className="inline-block h-px w-10 bg-amber align-middle" /> Mapa del archivo
+          </div>
+          <div ref={archiveDashRef} className="rv mb-5 hidden lg:block">{renderFilters(false, false)}</div>
+
+          <button
+            onClick={() => {
+              setFiltersFor("archive");
+              setFiltersOpen(true);
+            }}
+            aria-label="Abrir filtros del archivo"
+            className="chip-btn mb-5 flex w-full items-center justify-between gap-3 border border-line bg-panel px-4 py-3 text-left lg:hidden"
+          >
+            <span className="flex min-w-0 flex-wrap items-center gap-2 font-mono text-[11px] tracking-[0.18em] text-fog uppercase">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="shrink-0 text-amber">
+                <path d="M2 4h12M4.5 8h7M7 12h2" />
+              </svg>
+              Filtros del archivo
+              {filterSummary.length > 0 && (
+                <span className="border border-amber/40 bg-amber/10 px-1.5 py-0.5 font-mono text-[10px] tracking-wider text-amber">
+                  {filterSummary.join(" · ")}
+                </span>
+              )}
+            </span>
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-dim">
+              <path d="M3 6l5 5 5-5" />
+            </svg>
+          </button>
+
+          <YearPlayer
+            playing={timePlay}
+            month={timeMonth}
+            disabled={month !== -1}
+            disabledHint="Desactiva el filtro de mes para reproducir"
+            count={visibleQuakes.length}
+            onPlayPause={togglePlayer}
+            onSeek={setTimeMonth}
+            onReset={resetPlayer}
+          />
+
+          <div className="mb-10 grid grid-cols-1 gap-4 lg:h-[620px] lg:grid-cols-12">
+            <div className="h-[65vh] min-h-[340px] max-h-[580px] sm:h-[500px] lg:col-span-7 lg:h-full">
+              <Suspense fallback={<MapSkeleton />}>
+                <WorldMap
+                  quakes={filtered}
+                  selectedId={selectedId}
+                  onSelect={onSelect}
+                  liveQuakes={filteredLive}
+                  mode={mapMode}
+                  liveSource={liveSource}
+                  liveSelectedId={liveSel}
+                  onSelectLive={onSelectLive}
+                  gdacs={gdacsAlerts}
+                  caption={caption}
+                  fullscreenBar={archiveFullscreenBar}
+                  maxMonth={timeMonth}
+                  areaFilter={area}
+                  onAreaChange={setArea}
+                />
+              </Suspense>
+            </div>
+            <div className="no-scrollbar h-[480px] min-h-0 overflow-y-auto lg:col-span-5 lg:h-full">
+              <Suspense fallback={<SidePanelSkeleton />}>
+                {liveSel && filteredLive.some((q) => q.id === liveSel) ? (
+                  <LiveDetail
+                    q={filteredLive.find((q) => q.id === liveSel)!}
+                    onClose={() => setLiveSel(null)}
+                  />
+                ) : (
+                  <SidePanel quakes={visibleQuakes} selectedId={selectedId} onSelect={setSelectedId} />
+                )}
+              </Suspense>
+            </div>
+          </div>
+
+          <div className="mb-4 font-mono text-[11px] tracking-[0.24em] text-amber uppercase">
+            <span className="inline-block h-px w-10 bg-amber align-middle" /> Bitácora · tabla
+          </div>
           <div className="mb-4 grid grid-cols-2 items-center gap-2 md:flex md:flex-wrap">
             <button
               onClick={() => {
@@ -1147,32 +1160,27 @@ export default function App() {
           </Suspense>
         </div>
       </section>
+      )}
 
-      {/* ---------- 03 escalas ---------- */}
-      <section id="escalas" className="relative z-10 mx-auto max-w-[1400px] scroll-mt-24 px-4 py-12 sm:px-6">
-        <div ref={labRef} className="rv">
-          <Suspense fallback={<SectionSkeleton />}>
-            <MagnitudeLab />
-          </Suspense>
-        </div>
-      </section>
-
-      {/* ---------- 04 balance ---------- */}
+      {/* ---------- 05 balance ---------- */}
+      {showSection("#balance") && (
       <section id="balance" className="relative z-10 mx-auto max-w-[1400px] scroll-mt-24 px-4 py-12 sm:px-6">
         <SectionHead
-          num="04 · Balance"
+          num="05 · Balance"
           title="LA FACTURA DE 2026"
           sub={`Contadores del año, ritmo mensual de sismos mayores y víctimas, y el impacto económico preliminar del catálogo 2026 (${CATALOG_FIRST} – ${CATALOG_LAST}).`}
         />
-        <div ref={balRef} className="rv">
+        <div ref={balRef} className={rvView}>
           <Suspense fallback={<SectionSkeleton />}>
             <Balance />
           </Suspense>
         </div>
       </section>
+      )}
 
-      {/* ---------- pie ---------- */}
-      <footer className="relative z-10 mt-8 border-t border-line bg-deep">
+      {/* ---------- pie (móvil: vista Acerca) ---------- */}
+      {showSection("#acerca") && (
+      <footer id="acerca" className="relative z-10 mt-8 scroll-mt-24 border-t border-line bg-deep">
         <div className="mx-auto grid max-w-[1400px] gap-8 px-4 py-12 sm:px-6 md:grid-cols-3">
           <div>
             <div className="font-display text-xl tracking-wide text-bone">SISMÓGRAFO·26</div>
@@ -1223,6 +1231,7 @@ export default function App() {
           </div>
         </div>
       </footer>
+      )}
 
       {/* aviso de instalación PWA (se difiere si hay sheet/alertas o pantalla completa) */}
       <InstallBanner
@@ -1284,6 +1293,62 @@ export default function App() {
           )}
         </div>
       )}
+
+      {/* navegación tipo app + veredicto LO SENTÍ */}
+      <BottomTabs active={isMobile ? hashView : activeSection} onFelt={() => setFeltOpen(true)} />
+      <FeltSheet
+        open={feltOpen}
+        onClose={() => setFeltOpen(false)}
+        live={filteredLive}
+        status={liveStatus}
+        onLocate={(q) => {
+          setLiveSel(q.id);
+          setSelectedId(null);
+          if (isMobile && hashView !== "#en-vivo") {
+            window.location.hash = "#en-vivo";
+            window.setTimeout(() => {
+              mapSecRef.current?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+            }, 120);
+          } else {
+            mapSecRef.current?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+          }
+        }}
+      />
+
+      {/* ficha de sismo y filtros: globales para que abran desde cualquier vista móvil */}
+      <BottomSheet
+        open={isMobile && (sheetLive !== null || sheetLocal !== null)}
+        onClose={() => {
+          setLiveSel(null);
+          setSelectedId(null);
+        }}
+      >
+        <Suspense fallback={<div className="pulse-soft mx-4 mt-2 h-24 border border-line bg-deep" />}>
+          {sheetLive ? (
+            <LiveDetail q={sheetLive} onClose={() => setLiveSel(null)} />
+          ) : sheetLocal ? (
+            <Detail q={sheetLocal} onClose={() => setSelectedId(null)} />
+          ) : null}
+        </Suspense>
+      </BottomSheet>
+
+      <BottomSheet open={isMobile && filtersOpen} onClose={() => setFiltersOpen(false)} maxHeight="78dvh">
+        <div className="px-4 pt-1">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="font-mono text-[10px] tracking-[0.24em] text-dim uppercase">Filtros del mapa</span>
+            <button
+              onClick={() => setFiltersOpen(false)}
+              aria-label="Cerrar filtros"
+              className="chip-btn grid h-8 w-8 place-items-center border border-line text-fog hover:border-verm hover:text-verm"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                <path d="M2 2l10 10M12 2L2 12" />
+              </svg>
+            </button>
+          </div>
+            {renderFilters(true, filtersFor === "live")}
+          </div>
+        </BottomSheet>
 
       {/* toasts de descarga */}
       <Toaster />

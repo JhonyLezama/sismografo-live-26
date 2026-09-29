@@ -347,6 +347,36 @@ export function Detail({ q, onClose }: { q: Quake; onClose: () => void }) {
           </div>
         )}
 
+        {/* ShakeMap · intensidad percibida (USGS) */}
+        {pager !== "loading" && !!pager && !!pager.shakemapUrl && (
+          <details className="group border border-line bg-deep/50">
+            <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2 font-mono text-[9px] tracking-[0.16em] text-dim uppercase select-none hover:text-bone [&::-webkit-details-marker]:hidden">
+              ShakeMap · intensidad percibida (USGS)
+              <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="shrink-0 text-teal transition-transform duration-200 group-open:rotate-180">
+                <path d="M3 5l5 5 5-5" />
+              </svg>
+            </summary>
+            <div className="border-t border-line/70 p-3">
+              <a
+                href={`https://earthquake.usgs.gov/earthquakes/eventpage/${q.usgsId ?? pager.id}/shakemap/intensity`}
+                target="_blank"
+                rel="noreferrer"
+                className="group/img block border border-line/70 bg-abyss"
+              >
+                <img
+                  src={pager.shakemapUrl}
+                  alt="ShakeMap: intensidad sísmica percibida"
+                  loading="lazy"
+                  className="w-full opacity-90 transition-opacity group-hover/img:opacity-100"
+                />
+              </a>
+              <p className="mt-2 font-mono text-[10px] leading-relaxed tracking-wider text-dim uppercase">
+                Colores = intensidad MMI percibida · la imagen se abre en el sitio oficial del USGS
+              </p>
+            </div>
+          </details>
+        )}
+
         {/* FUENTES oficiales citadas */}
         {!!q.sources?.length && (
           <div className="border border-line bg-deep/50">

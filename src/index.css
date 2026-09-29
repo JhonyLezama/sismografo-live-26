@@ -250,7 +250,7 @@ input[type="range"].mag-slider::-moz-range-thumb {
   html { scroll-behavior: auto; }
   .ticker-track { animation: none; }
   .ticker-mask { overflow-x: auto; }
-  .ring-pulse, .spin-slow, .blink-dot, .drift-y { animation: none; }
+  .ring-pulse, .spin-slow, .blink-dot, .drift-y, .felt-pulse { animation: none; }
   .ring-pulse { display: none; }
   .rv { opacity: 1; transform: none; transition: none; }
   .bar-grow, .bar-grow-v { transform: none; transition: none; }
@@ -261,3 +261,10 @@ input[type="range"].mag-slider::-moz-range-thumb {
 .map-stage.is-dragging .spin-slow {
   animation-play-state: paused;
 }
+
+/* ---------- botón LO SENTÍ ---------- */
+@keyframes feltPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(240, 96, 60, 0.55); }
+  50% { box-shadow: 0 0 0 9px rgba(240, 96, 60, 0); }
+}
+.felt-pulse { animation: feltPulse 2.2s ease-out infinite; }

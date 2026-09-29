@@ -28,27 +28,38 @@ export function usePrefersReducedMotion() {
   return reduced;
 }
 
-/* revela elementos al entrar en viewport */
+/* revela elementos al entrar en viewport.
+   Callback ref: observa al montar (aunque sea tarde, como en las vistas
+   móviles que se montan al cambiar de tab) y en cada remontaje. */
 export function useReveal<T extends HTMLElement>() {
-  const ref = useRef<T | null>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
+  const ioRef = useRef<IntersectionObserver | null>(null);
+  useEffect(() => () => ioRef.current?.disconnect(), []);
+  return useCallback((el: T | null) => {
+    if (ioRef.current) {
+      ioRef.current.disconnect();
+      ioRef.current = null;
+    }
+    if (!el || el.classList.contains("rv-on")) return;
+    /* si ya está en viewport (vistas que montan arriba del todo), revela directo */
+    const r = el.getBoundingClientRect();
+    if (r.top < window.innerHeight && r.bottom > 0) {
+      el.classList.add("rv-on");
+      return;
+    }
     const io = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
           if (e.isIntersecting) {
             e.target.classList.add("rv-on");
-            io.unobserve(e.target);
+            io.disconnect();
           }
         });
       },
       { threshold: 0.12 }
     );
     io.observe(el);
-    return () => io.disconnect();
+    ioRef.current = io;
   }, []);
-  return ref;
 }
 
 /* contador ascendente al ser visible */
