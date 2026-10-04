@@ -761,5 +761,213 @@
     "tsunami": false,
     "plates": "Sismicidad inducida por minería (Alta Silesia)",
     "summary": "El evento más pequeño y a la vez más insólito de la lista: un temblor inducido por actividad minera que causó una víctima en la cuenca hullera de Silesia."
+  },
+  {
+    "id": "us-us6000tz1y",
+    "place": "5 km NNE of Korumburra, Australia",
+    "country": "Australia",
+    "iso": "AU",
+    "region": "Oceanía",
+    "date": "2026-10-02",
+    "time": "16:01",
+    "lat": -38.38,
+    "lon": 145.84,
+    "mag": 4.7,
+    "depth": 10,
+    "mmi": "VI",
+    "mmiLabel": "Fuerte",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": false,
+    "plates": "Sin asignar",
+    "usgsId": "us6000tz1y",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us6000tz1y. Pendiente de revisión.",
+    "gdacsId": "1569124",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tz1y/executive"
+      },
+      {
+        "label": "GDACS · informe",
+        "url": "https://www.gdacs.org/report.aspx?eventtype=EQ&eventid=1569124"
+      }
+    ]
+  },
+  {
+    "id": "us-uw714111952",
+    "place": "6 km WNW of Wauna, Washington",
+    "country": "Washington",
+    "iso": "",
+    "region": "Norteamérica",
+    "date": "2026-09-29",
+    "time": "21:05",
+    "lat": 47.4,
+    "lon": -122.72,
+    "mag": 4.2,
+    "depth": 28,
+    "mmi": "III",
+    "mmiLabel": "Ligero",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": false,
+    "plates": "Sin asignar",
+    "usgsId": "uw714111952",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/uw714111952. Pendiente de revisión.",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/uw714111952/executive"
+      }
+    ]
+  },
+  {
+    "id": "us-us6000txpi",
+    "place": "80 km ENE of Tadine, New Caledonia",
+    "country": "New Caledonia",
+    "iso": "",
+    "region": "Oceanía",
+    "date": "2026-09-25",
+    "time": "21:23",
+    "lat": -21.3,
+    "lon": 168.61,
+    "mag": 6.6,
+    "depth": 10,
+    "mmi": "VI",
+    "mmiLabel": "Fuerte",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": false,
+    "plates": "Sin asignar",
+    "usgsId": "us6000txpi",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us6000txpi. Pendiente de revisión.",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000txpi/executive"
+      }
+    ]
+  },
+  {
+    "id": "us-us7000tiqc",
+    "place": "49 km NNE of Kainantu, Papua New Guinea",
+    "country": "Papua New Guinea",
+    "iso": "PG",
+    "region": "Asia",
+    "date": "2026-09-20",
+    "time": "09:17",
+    "lat": -5.9,
+    "lon": 146.09,
+    "mag": 6.4,
+    "depth": 104,
+    "mmi": "V",
+    "mmiLabel": "Moderado",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": false,
+    "plates": "Sin asignar",
+    "usgsId": "us7000tiqc",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us7000tiqc. Pendiente de revisión.",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us7000tiqc/executive"
+      }
+    ]
+  },
+  {
+    "id": "us-us7000ti1p",
+    "place": "177 km W of Nikolski, Alaska",
+    "country": "Alaska",
+    "iso": "US",
+    "region": "Asia",
+    "date": "2026-09-17",
+    "time": "14:19",
+    "lat": 52.96,
+    "lon": -171.5,
+    "mag": 6.5,
+    "depth": 98,
+    "mmi": "V",
+    "mmiLabel": "Moderado",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": true,
+    "plates": "Sin asignar",
+    "usgsId": "us7000ti1p",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us7000ti1p. Pendiente de revisión.",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us7000ti1p/executive"
+      }
+    ]
+  },
+  {
+    "id": "us-us7000tgrk",
+    "place": "126 km NNE of Teluknaga, Indonesia",
+    "country": "Indonesia",
+    "iso": "ID",
+    "region": "Asia",
+    "date": "2026-09-11",
+    "time": "21:23",
+    "lat": -4.98,
+    "lon": 106.87,
+    "mag": 6.5,
+    "depth": 372,
+    "mmi": "III",
+    "mmiLabel": "Ligero",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": false,
+    "plates": "Sin asignar",
+    "usgsId": "us7000tgrk",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us7000tgrk. Pendiente de revisión.",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us7000tgrk/executive"
+      }
+    ]
+  },
+  {
+    "id": "us-uw714095342",
+    "place": "20 km E of Castle Rock, Washington",
+    "country": "Washington",
+    "iso": "",
+    "region": "Norteamérica",
+    "date": "2026-09-05",
+    "time": "11:09",
+    "lat": 46.25,
+    "lon": -122.64,
+    "mag": 3.8,
+    "depth": 18,
+    "mmi": "IV",
+    "mmiLabel": "Ligero",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": false,
+    "plates": "Sin asignar",
+    "usgsId": "uw714095342",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/uw714095342. Pendiente de revisión.",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/uw714095342/executive"
+      }
+    ]
   }
 ]
