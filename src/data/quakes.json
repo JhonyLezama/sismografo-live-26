@@ -761,5 +761,489 @@
     "tsunami": false,
     "plates": "Sismicidad inducida por minería (Alta Silesia)",
     "summary": "El evento más pequeño y a la vez más insólito de la lista: un temblor inducido por actividad minera que causó una víctima en la cuenca hullera de Silesia."
+  },
+  {
+    "id": "us-us7000ttxz",
+    "place": "southeast of Easter Island",
+    "country": "southeast of Easter Island",
+    "iso": "",
+    "region": "Oceanía",
+    "date": "2026-10-29",
+    "time": "07:49",
+    "lat": -36.41,
+    "lon": -98.05,
+    "mag": 6.4,
+    "depth": 10,
+    "mmi": "—",
+    "mmiLabel": "Sin datos",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": false,
+    "plates": "Sin asignar",
+    "usgsId": "us7000ttxz",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us7000ttxz. Pendiente de revisión.",
+    "gdacsId": "1574517",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us7000ttxz/executive"
+      },
+      {
+        "label": "GDACS · informe",
+        "url": "https://www.gdacs.org/report.aspx?eventtype=EQ&eventid=1574517"
+      }
+    ]
+  },
+  {
+    "id": "us-us6000u4r9",
+    "place": "Bonin Islands, Japan region",
+    "country": "Japan region",
+    "iso": "JP",
+    "region": "Asia",
+    "date": "2026-10-25",
+    "time": "02:09",
+    "lat": 27.8,
+    "lon": 139.62,
+    "mag": 6.5,
+    "depth": 492,
+    "mmi": "—",
+    "mmiLabel": "Sin datos",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": true,
+    "plates": "Sin asignar",
+    "usgsId": "us6000u4r9",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us6000u4r9. Pendiente de revisión.",
+    "gdacsId": "1573709",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000u4r9/executive"
+      },
+      {
+        "label": "GDACS · informe",
+        "url": "https://www.gdacs.org/report.aspx?eventtype=EQ&eventid=1573709"
+      }
+    ]
+  },
+  {
+    "id": "us-us6000u4jb",
+    "place": "170 km NW of Port-Olry, Vanuatu",
+    "country": "Vanuatu",
+    "iso": "VU",
+    "region": "Oceanía",
+    "date": "2026-10-24",
+    "time": "02:35",
+    "lat": -14.04,
+    "lon": 165.87,
+    "mag": 6.3,
+    "depth": 10,
+    "mmi": "IV",
+    "mmiLabel": "Ligero",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": false,
+    "plates": "Sin asignar",
+    "usgsId": "us6000u4jb",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us6000u4jb. Pendiente de revisión.",
+    "gdacsId": "1573578",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000u4jb/executive"
+      },
+      {
+        "label": "GDACS · informe",
+        "url": "https://www.gdacs.org/report.aspx?eventtype=EQ&eventid=1573578"
+      }
+    ]
+  },
+  {
+    "id": "us-us6000u43g",
+    "place": "191 km ENE of Nagqu, China",
+    "country": "China",
+    "iso": "CN",
+    "region": "Asia",
+    "date": "2026-10-22",
+    "time": "14:33",
+    "lat": 32.38,
+    "lon": 93.78,
+    "mag": 7,
+    "depth": 18,
+    "mmi": "VIII",
+    "mmiLabel": "Severo",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": false,
+    "plates": "Sin asignar",
+    "usgsId": "us6000u43g",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us6000u43g. Pendiente de revisión.",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000u43g/executive"
+      }
+    ]
+  },
+  {
+    "id": "us-us6000u3jl",
+    "place": "197 km NW of Port-Olry, Vanuatu",
+    "country": "Vanuatu",
+    "iso": "VU",
+    "region": "Oceanía",
+    "date": "2026-10-20",
+    "time": "04:20",
+    "lat": -13.99,
+    "lon": 165.59,
+    "mag": 6.3,
+    "depth": 16,
+    "mmi": "IV",
+    "mmiLabel": "Ligero",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": true,
+    "plates": "Sin asignar",
+    "usgsId": "us6000u3jl",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us6000u3jl. Pendiente de revisión.",
+    "gdacsId": "1573578",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000u3jl/executive"
+      },
+      {
+        "label": "GDACS · informe",
+        "url": "https://www.gdacs.org/report.aspx?eventtype=EQ&eventid=1573578"
+      }
+    ]
+  },
+  {
+    "id": "us-us6000u2y1",
+    "place": "48 km WNW of Khuzdar, Pakistan",
+    "country": "Pakistan",
+    "iso": "PK",
+    "region": "Asia",
+    "date": "2026-10-17",
+    "time": "05:06",
+    "lat": 28.02,
+    "lon": 66.17,
+    "mag": 5.7,
+    "depth": 10,
+    "mmi": "VII",
+    "mmiLabel": "Mayor",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": false,
+    "plates": "Sin asignar",
+    "usgsId": "us6000u2y1",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us6000u2y1. Pendiente de revisión.",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000u2y1/executive"
+      }
+    ]
+  },
+  {
+    "id": "us-us6000u2mq",
+    "place": "76 km NE of Ozernovskiy, Russia",
+    "country": "Russia",
+    "iso": "RU",
+    "region": "Asia",
+    "date": "2026-10-16",
+    "time": "03:35",
+    "lat": 51.98,
+    "lon": 157.27,
+    "mag": 6.9,
+    "depth": 135,
+    "mmi": "VI",
+    "mmiLabel": "Fuerte",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": false,
+    "plates": "Sin asignar",
+    "usgsId": "us6000u2mq",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us6000u2mq. Pendiente de revisión.",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000u2mq/executive"
+      }
+    ]
+  },
+  {
+    "id": "us-us6000u214",
+    "place": "central Mid-Atlantic Ridge",
+    "country": "central Mid-Atlantic Ridge",
+    "iso": "",
+    "region": "África",
+    "date": "2026-10-13",
+    "time": "12:23",
+    "lat": -0.41,
+    "lon": -19.43,
+    "mag": 6.8,
+    "depth": 10,
+    "mmi": "—",
+    "mmiLabel": "Sin datos",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": true,
+    "plates": "Sin asignar",
+    "usgsId": "us6000u214",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us6000u214. Pendiente de revisión.",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000u214/executive"
+      }
+    ]
+  },
+  {
+    "id": "us-us6000u1z5",
+    "place": "central Mid-Atlantic Ridge",
+    "country": "central Mid-Atlantic Ridge",
+    "iso": "",
+    "region": "África",
+    "date": "2026-10-13",
+    "time": "05:44",
+    "lat": 0.17,
+    "lon": -19.86,
+    "mag": 6.7,
+    "depth": 10,
+    "mmi": "—",
+    "mmiLabel": "Sin datos",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": false,
+    "plates": "Sin asignar",
+    "usgsId": "us6000u1z5",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us6000u1z5. Pendiente de revisión.",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000u1z5/executive"
+      }
+    ]
+  },
+  {
+    "id": "us-us6000u1wn",
+    "place": "15 km W of Río Grande, Panama",
+    "country": "Panama",
+    "iso": "PA",
+    "region": "Sudamérica",
+    "date": "2026-10-12",
+    "time": "23:20",
+    "lat": 7.71,
+    "lon": -81.47,
+    "mag": 6.1,
+    "depth": 11,
+    "mmi": "VII",
+    "mmiLabel": "Mayor",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": false,
+    "plates": "Sin asignar",
+    "usgsId": "us6000u1wn",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us6000u1wn. Pendiente de revisión.",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000u1wn/executive"
+      }
+    ]
+  },
+  {
+    "id": "us-us6000u1cf",
+    "place": "4 km NNE of La Tronosa, Panama",
+    "country": "Panama",
+    "iso": "PA",
+    "region": "Sudamérica",
+    "date": "2026-10-10",
+    "time": "04:14",
+    "lat": 7.48,
+    "lon": -80.57,
+    "mag": 6,
+    "depth": 10,
+    "mmi": "VIII",
+    "mmiLabel": "Severo",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": false,
+    "plates": "Sin asignar",
+    "usgsId": "us6000u1cf",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us6000u1cf. Pendiente de revisión.",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000u1cf/executive"
+      }
+    ]
+  },
+  {
+    "id": "us-us6000u19w",
+    "place": "12 km W of Río Grande, Panama",
+    "country": "Panama",
+    "iso": "PA",
+    "region": "Sudamérica",
+    "date": "2026-10-09",
+    "time": "20:25",
+    "lat": 7.7,
+    "lon": -81.44,
+    "mag": 6.6,
+    "depth": 24,
+    "mmi": "VII",
+    "mmiLabel": "Mayor",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": true,
+    "plates": "Sin asignar",
+    "usgsId": "us6000u19w",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us6000u19w. Pendiente de revisión.",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000u19w/executive"
+      }
+    ]
+  },
+  {
+    "id": "us-us6000u18x",
+    "place": "1 km S of El Cacao, Panama",
+    "country": "Panama",
+    "iso": "PA",
+    "region": "Sudamérica",
+    "date": "2026-10-09",
+    "time": "18:37",
+    "lat": 7.44,
+    "lon": -80.4,
+    "mag": 5.8,
+    "depth": 10,
+    "mmi": "VII",
+    "mmiLabel": "Mayor",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": false,
+    "plates": "Sin asignar",
+    "usgsId": "us6000u18x",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us6000u18x. Pendiente de revisión.",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000u18x/executive"
+      }
+    ]
+  },
+  {
+    "id": "us-us6000u0xi",
+    "place": "102 km NE of Norsup, Vanuatu",
+    "country": "Vanuatu",
+    "iso": "VU",
+    "region": "Oceanía",
+    "date": "2026-10-08",
+    "time": "09:00",
+    "lat": -15.54,
+    "lon": 168.19,
+    "mag": 6.3,
+    "depth": 10,
+    "mmi": "VIII",
+    "mmiLabel": "Severo",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": false,
+    "plates": "Sin asignar",
+    "usgsId": "us6000u0xi",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us6000u0xi. Pendiente de revisión.",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000u0xi/executive"
+      }
+    ]
+  },
+  {
+    "id": "us-aka2026tuxgky",
+    "place": "92 km NNW of Aleneva, Alaska",
+    "country": "Alaska",
+    "iso": "US",
+    "region": "Norteamérica",
+    "date": "2026-10-06",
+    "time": "18:34",
+    "lat": 58.8,
+    "lon": -153.61,
+    "mag": 5.5,
+    "depth": 88,
+    "mmi": "IV",
+    "mmiLabel": "Ligero",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": false,
+    "plates": "Sin asignar",
+    "usgsId": "aka2026tuxgky",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/aka2026tuxgky. Pendiente de revisión.",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/aka2026tuxgky/executive"
+      }
+    ]
+  },
+  {
+    "id": "us-us6000tz1y",
+    "place": "5 km NNW of Korumburra, Australia",
+    "country": "Australia",
+    "iso": "AU",
+    "region": "Oceanía",
+    "date": "2026-10-02",
+    "time": "16:01",
+    "lat": -38.38,
+    "lon": 145.81,
+    "mag": 4.7,
+    "depth": 10,
+    "mmi": "VI",
+    "mmiLabel": "Fuerte",
+    "deaths": 0,
+    "injured": 0,
+    "costM": null,
+    "tsunami": false,
+    "plates": "Sin asignar",
+    "usgsId": "us6000tz1y",
+    "needsReview": true,
+    "summary": "Evento añadido automáticamente desde el feed del USGS. Referencia: https://earthquake.usgs.gov/earthquakes/eventpage/us6000tz1y. Pendiente de revisión.",
+    "sources": [
+      {
+        "label": "USGS · ficha",
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000tz1y/executive"
+      }
+    ]
   }
 ]
